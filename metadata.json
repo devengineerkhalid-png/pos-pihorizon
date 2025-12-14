@@ -1,0 +1,7 @@
+{
+  "name": "POS",
+  "description": "A modern, professional desktop-based Point of Sale application with comprehensive inventory, user, and sales management.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
