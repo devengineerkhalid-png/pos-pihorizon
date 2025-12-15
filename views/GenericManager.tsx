@@ -1,8 +1,8 @@
 
 import React, { useState, useRef } from 'react';
 import { Button, Input, Table, Modal, Badge, Select } from '../components/UIComponents';
-import { Plus, Search, Filter, Edit, Trash2, Layers, UploadCloud, Barcode, RotateCcw, AlertOctagon, Download, Upload, Printer, QrCode, X } from 'lucide-react';
-import { View, ProductVariant } from '../types';
+import { Plus, Search, Filter, Edit, Trash2, Layers, UploadCloud, Barcode, RotateCcw, AlertOctagon, Download, Upload, Printer, QrCode, X, Eye, Phone, Mail, MapPin, FileText } from 'lucide-react';
+import { View, ProductVariant, Purchase } from '../types';
 import { useStore } from '../context/StoreContext';
 
 interface ManagerProps {
@@ -11,7 +11,7 @@ interface ManagerProps {
 
 export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
     const { 
-        products, suppliers, customers, users, expenses, invoices, roles, settings,
+        products, suppliers, customers, users, expenses, invoices, roles, settings, purchases,
         addItem, updateItem, deleteItem, returnInvoice, addStockAdjustment
     } = useStore();
 
@@ -23,6 +23,10 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
     const [isStockAdjOpen, setIsStockAdjOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [labelProduct, setLabelProduct] = useState<any>(null);
+
+    // View Supplier Modal State
+    const [viewSupplier, setViewSupplier] = useState<any>(null);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
     const [formData, setFormData] = useState<any>({});
     
@@ -71,6 +75,11 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
             setTempVariants([]);
         }
         setIsModalOpen(true);
+    };
+
+    const handleViewSupplier = (supplier: any) => {
+        setViewSupplier(supplier);
+        setIsViewModalOpen(true);
     };
 
     const handleSave = () => {
@@ -394,6 +403,9 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
                     data={filteredData} 
                     actions={(item) => (
                         <div className="flex justify-end gap-2">
+                             {type === View.SUPPLIERS && (
+                                  <button onClick={() => handleViewSupplier(item)} className="p-1.5 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded text-blue-600 transition-colors" title="View Details"><Eye size={16} /></button>
+                             )}
                              {type === View.PRODUCTS && (
                                  <button onClick={() => handlePrintLabel(item)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 transition-colors" title="Print Label"><Printer size={16} /></button>
                              )}
@@ -434,6 +446,92 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
                         <Button onClick={submitAdjustment} variant="danger">Confirm Reduction</Button>
                     </div>
                 </div>
+            </Modal>
+
+            {/* View Supplier Modal */}
+            <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="Supplier Details">
+                {viewSupplier && (
+                    <div className="space-y-6">
+                        {/* Header Info */}
+                        <div className="flex justify-between items-start bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <div>
+                                <h3 className="text-xl font-bold text-slate-900 dark:text-white">{viewSupplier.businessName}</h3>
+                                <p className="text-slate-500 text-sm">{viewSupplier.name}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-xs text-slate-500 uppercase tracking-wide">Current Balance</p>
+                                <p className={`text-xl font-bold ${viewSupplier.balance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                                    {settings.currencySymbol}{Math.abs(viewSupplier.balance).toFixed(2)}
+                                    <span className="text-xs font-normal ml-1 text-slate-500">{viewSupplier.balance > 0 ? 'Due' : 'Credit'}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Contact Details */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3">
+                                <Phone size={18} className="text-slate-400" />
+                                <div>
+                                    <p className="text-xs text-slate-500">Phone</p>
+                                    <p className="font-medium text-slate-900 dark:text-white">{viewSupplier.phone}</p>
+                                </div>
+                            </div>
+                            <div className="p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3">
+                                <Mail size={18} className="text-slate-400" />
+                                <div>
+                                    <p className="text-xs text-slate-500">Email</p>
+                                    <p className="font-medium text-slate-900 dark:text-white">{viewSupplier.email}</p>
+                                </div>
+                            </div>
+                            <div className="col-span-2 p-3 border border-slate-200 dark:border-slate-700 rounded-lg flex items-center gap-3">
+                                <MapPin size={18} className="text-slate-400" />
+                                <div>
+                                    <p className="text-xs text-slate-500">Address</p>
+                                    <p className="font-medium text-slate-900 dark:text-white">{viewSupplier.address}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Purchase History */}
+                        <div>
+                            <h4 className="font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                                <FileText size={18} /> Recent Purchases
+                            </h4>
+                            <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-slate-50 dark:bg-slate-800 text-xs text-slate-500 uppercase">
+                                        <tr>
+                                            <th className="px-3 py-2">Date</th>
+                                            <th className="px-3 py-2">Ref #</th>
+                                            <th className="px-3 py-2 text-right">Amount</th>
+                                            <th className="px-3 py-2 text-center">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                                        {purchases.filter((p: Purchase) => p.supplierId === viewSupplier.id).length === 0 ? (
+                                            <tr><td colSpan={4} className="px-3 py-4 text-center text-slate-500">No purchases found.</td></tr>
+                                        ) : (
+                                            purchases.filter((p: Purchase) => p.supplierId === viewSupplier.id).slice(0, 5).map(p => (
+                                                <tr key={p.id}>
+                                                    <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{p.date}</td>
+                                                    <td className="px-3 py-2 text-slate-500">{p.invoiceNumber}</td>
+                                                    <td className="px-3 py-2 text-right font-medium text-slate-900 dark:text-white">{settings.currencySymbol}{p.total.toFixed(2)}</td>
+                                                    <td className="px-3 py-2 text-center">
+                                                        <Badge variant={p.status === 'Completed' ? 'success' : 'neutral'}>{p.status}</Badge>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end pt-2">
+                            <Button variant="secondary" onClick={() => setIsViewModalOpen(false)}>Close</Button>
+                        </div>
+                    </div>
+                )}
             </Modal>
 
             {/* Label Print Modal */}
@@ -580,6 +678,27 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
                             <Input label="Phone" value={formData.phone || ''} onChange={e => updateField('phone', e.target.value)} />
                             <Input label="Email" value={formData.email || ''} onChange={e => updateField('email', e.target.value)} />
                             <Input label="Address" className="col-span-2" value={formData.address || ''} onChange={e => updateField('address', e.target.value)} />
+                        </>
+                    )}
+
+                    {/* --- INVOICES (NEW) --- */}
+                    {type === View.INVOICES && (
+                        <>
+                             <div className="col-span-2 bg-amber-50 p-4 rounded-lg border border-amber-200 mb-2">
+                                <p className="text-sm text-amber-800">
+                                    <strong>Note:</strong> You are editing invoice metadata. To modify items, refunds, or quantities, please use the 'Return' feature in the list view or the POS terminal.
+                                </p>
+                            </div>
+                            <div className="col-span-2">
+                                <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Invoice ID (Read Only)</label>
+                                <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded border border-slate-300 dark:border-slate-600 text-slate-500 font-mono">
+                                    {formData.id}
+                                </div>
+                            </div>
+                            <Input label="Customer Name" value={formData.customerName || ''} onChange={e => updateField('customerName', e.target.value)} />
+                            <Select label="Payment Method" options={[{value:'Cash', label:'Cash'}, {value:'Card', label:'Card'}, {value:'Online', label:'Online'}]} value={formData.paymentMethod} onChange={e => updateField('paymentMethod', e.target.value)} />
+                            <Select label="Status" options={[{value:'Paid', label:'Paid'}, {value:'Pending', label:'Pending'}, {value:'Returned', label:'Returned'}, {value:'Partial Refund', label:'Partial Refund'}]} value={formData.status} onChange={e => updateField('status', e.target.value)} />
+                            <Input label="Date" type="date" value={formData.date || ''} onChange={e => updateField('date', e.target.value)} />
                         </>
                     )}
 

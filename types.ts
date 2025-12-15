@@ -212,6 +212,8 @@ export interface LedgerEntry {
     accountId: string; // 'GENERAL', 'SALES', 'CASH', or SupplierID/CustomerID
     accountName: string;
     category: 'SALES' | 'PURCHASE' | 'EXPENSE' | 'PAYMENT' | 'ADJUSTMENT';
+    userId?: string; // Auditing
+    userName?: string; // Auditing
 }
 
 export interface StockAdjustment {

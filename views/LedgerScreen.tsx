@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Card, Table, Select, Button, Input, Badge } from '../components/UIComponents';
@@ -5,8 +6,9 @@ import { Download, Filter, BookOpen } from 'lucide-react';
 import { LedgerEntry } from '../types';
 
 export const LedgerScreen: React.FC = () => {
-    const { ledger, suppliers, settings } = useStore();
+    const { ledger, suppliers, settings, users } = useStore();
     const [filterAccount, setFilterAccount] = useState('all');
+    const [filterUser, setFilterUser] = useState('all');
     const [search, setSearch] = useState('');
 
     const accounts = [
@@ -17,12 +19,18 @@ export const LedgerScreen: React.FC = () => {
         ...suppliers.map(s => ({ value: s.id, label: `Supplier: ${s.businessName}` }))
     ];
 
+    const userOptions = [
+        { value: 'all', label: 'All Users (Audit)' },
+        ...users.map(u => ({ value: u.id, label: `${u.name} (${u.role})` }))
+    ];
+
     const filteredLedger = ledger.filter(entry => {
         const matchesAccount = filterAccount === 'all' || entry.accountId === filterAccount;
+        const matchesUser = filterUser === 'all' || entry.userId === filterUser;
         const matchesSearch = 
             entry.description.toLowerCase().includes(search.toLowerCase()) || 
             entry.accountName.toLowerCase().includes(search.toLowerCase());
-        return matchesAccount && matchesSearch;
+        return matchesAccount && matchesSearch && matchesUser;
     });
 
     // Calculate dynamic balance for the filtered view (simple running balance visualization)
@@ -62,6 +70,14 @@ export const LedgerScreen: React.FC = () => {
                         />
                     </div>
                     <div className="flex-1 min-w-[200px]">
+                        <Select 
+                            label="Filter by User (Audit)" 
+                            options={userOptions} 
+                            value={filterUser}
+                            onChange={(e) => setFilterUser(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1 min-w-[200px]">
                          <Input 
                             label="Search Descriptions" 
                             placeholder="e.g. Invoice #1001" 
@@ -79,6 +95,7 @@ export const LedgerScreen: React.FC = () => {
                         { header: 'Date', accessor: 'date' },
                         { header: 'Account', accessor: (l: LedgerEntry) => <span className="font-medium text-slate-700">{l.accountName}</span> },
                         { header: 'Description', accessor: 'description' },
+                        { header: 'User', accessor: (l: LedgerEntry) => <span className="text-xs text-slate-500">{l.userName || 'System'}</span> },
                         { header: 'Type', accessor: (l: LedgerEntry) => <Badge variant={l.type === 'CREDIT' ? 'success' : 'neutral'}>{l.type}</Badge> },
                         { header: 'Category', accessor: (l: LedgerEntry) => <span className="text-xs uppercase font-bold text-slate-500">{l.category}</span> },
                         { header: 'Amount', accessor: (l: LedgerEntry) => (

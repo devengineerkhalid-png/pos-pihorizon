@@ -55,7 +55,7 @@ const INITIAL_PURCHASES: Purchase[] = [
 ];
 
 const INITIAL_LEDGER: LedgerEntry[] = [
-    { id: 'l-1', date: '2023-10-24', description: 'Opening Balance Adjustment', type: 'CREDIT', amount: 5000, accountId: 'CASH', accountName: 'Cash Drawer', category: 'ADJUSTMENT' }
+    { id: 'l-1', date: '2023-10-24', description: 'Opening Balance Adjustment', type: 'CREDIT', amount: 5000, accountId: 'CASH', accountName: 'Cash Drawer', category: 'ADJUSTMENT', userId: 'u-1', userName: 'Admin User' }
 ];
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -134,7 +134,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const [ledger, setLedger] = useState<LedgerEntry[]>(INITIAL_LEDGER);
     const [roles, setRoles] = useState<Role[]>([
         { id: 'r-1', name: 'Admin', permissions: ['ALL'] },
-        { id: 'r-2', name: 'Cashier', permissions: ['POS', 'CUSTOMERS'] }
+        // Updated Cashier permissions to include DASHBOARD
+        { id: 'r-2', name: 'Cashier', permissions: ['POS', 'CUSTOMERS', 'DASHBOARD'] }
     ]);
     const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
     
@@ -235,8 +236,13 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setCurrentUser(null);
     };
 
-    const addLedgerEntry = (entry: Omit<LedgerEntry, 'id'>) => {
-        setLedger(prev => [{...entry, id: `L-${Date.now()}-${Math.random()}`}, ...prev]);
+    const addLedgerEntry = (entry: Omit<LedgerEntry, 'id' | 'userId' | 'userName'>) => {
+        setLedger(prev => [{
+            ...entry, 
+            id: `L-${Date.now()}-${Math.random()}`,
+            userId: currentUser?.id || 'sys',
+            userName: currentUser?.name || 'System'
+        }, ...prev]);
     };
 
     // --- REGISTER LOGIC ---

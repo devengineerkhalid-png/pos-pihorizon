@@ -4,6 +4,7 @@ import { Input, Button, Badge, Modal, Select } from '../components/UIComponents'
 import { Search, Trash2, Plus, Minus, User, PauseCircle, CreditCard, ShoppingCart, Layers, Tag, RotateCcw, PenTool, Badge as BadgeIcon, Printer, CheckCircle, ArrowRight, Truck, Clock, AlertCircle, PlusCircle, UserPlus, Gift, FileText, Reply } from 'lucide-react';
 import { Product, CartItem, ProductVariant, HeldOrder, View, Invoice, ReturnItem } from '../types';
 import { useStore } from '../context/StoreContext';
+import { formatDistanceToNow } from 'date-fns';
 
 const CATEGORIES = ['All Items', 'Electronics', 'Apparel', 'Home', 'Beauty', 'Sports', 'Toys'];
 
@@ -340,6 +341,19 @@ export const PosScreen: React.FC = () => {
                         />
                     </div>
                     <div className="flex gap-2">
+                         <Button 
+                            variant={heldOrders.length > 0 ? 'secondary' : 'outline'} 
+                            className={`relative ${heldOrders.length > 0 ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : ''}`}
+                            onClick={() => setShowHeldOrders(true)} 
+                            icon={<PauseCircle size={16} />}
+                         >
+                            Held Orders
+                            {heldOrders.length > 0 && (
+                                <span className="absolute -top-2 -right-2 h-5 w-5 bg-amber-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold shadow-sm">
+                                    {heldOrders.length}
+                                </span>
+                            )}
+                         </Button>
                          <Button variant="outline" onClick={() => setShowCustomItem(true)} icon={<PenTool size={16} />}>Custom</Button>
                          <Button variant="outline" onClick={() => setShowBorrowItem(true)} icon={<Truck size={16} />}>Borrow</Button>
                          <Button variant="danger" className="bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100" onClick={() => setShowReturns(true)} icon={<Reply size={16} />}>Returns</Button>
@@ -402,22 +416,6 @@ export const PosScreen: React.FC = () => {
             {/* Right Side - Cart */}
             <div className="w-96 bg-white rounded-xl shadow-lg border border-slate-200 flex flex-col h-full flex-shrink-0">
                 
-                {/* Active Held Orders Indicator - VISIBLE IMPROVEMENT */}
-                {heldOrders.length > 0 && (
-                    <div className="bg-amber-50 border-b border-amber-100 p-2 flex justify-between items-center animate-in slide-in-from-top-2">
-                        <div className="flex items-center gap-2 text-amber-800">
-                             <PauseCircle size={16} className="fill-amber-200" />
-                             <span className="text-xs font-bold">{heldOrders.length} Order(s) on Hold</span>
-                        </div>
-                        <button 
-                            onClick={() => setShowHeldOrders(true)} 
-                            className="text-xs bg-white border border-amber-200 text-amber-700 px-2 py-1 rounded font-medium hover:bg-amber-100"
-                        >
-                            View All
-                        </button>
-                    </div>
-                )}
-
                 {/* Header: Customer & Salesman */}
                 <div className="p-4 border-b border-slate-100 space-y-3 bg-slate-50/50 rounded-t-xl">
                     <div className="flex items-center justify-between">
@@ -796,32 +794,55 @@ export const PosScreen: React.FC = () => {
                 </div>
             </Modal>
 
-            <Modal isOpen={showHeldOrders} onClose={() => setShowHeldOrders(false)} title="Held Orders (Proforma)">
+            <Modal isOpen={showHeldOrders} onClose={() => setShowHeldOrders(false)} title={`Held Orders (${heldOrders.length})`}>
                 {heldOrders.length === 0 ? (
                     <div className="text-center py-10">
-                        <RotateCcw className="h-12 w-12 text-slate-300 mx-auto mb-2" />
-                        <p className="text-slate-500">No held orders found</p>
+                        <div className="bg-slate-50 h-16 w-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                             <PauseCircle className="h-8 w-8 text-slate-300" />
+                        </div>
+                        <p className="text-slate-500 font-medium">No active held orders</p>
+                        <p className="text-xs text-slate-400 mt-1">Park an order to see it here</p>
                     </div>
                 ) : (
-                    <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                    <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
                         {heldOrders.map(order => {
-                            const isExpired = new Date() > order.expiration;
+                            const isExpired = new Date() > new Date(order.expiration);
                             return (
-                                <div key={order.id} className={`flex justify-between items-center p-4 border rounded-lg ${isExpired ? 'bg-rose-50 border-rose-200' : 'bg-white border-slate-200 hover:bg-slate-50'}`}>
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h4 className="font-bold text-slate-900">{order.customerName}</h4>
-                                            {isExpired && <Badge variant="danger">Expired</Badge>}
+                                <div key={order.id} className={`group relative flex flex-col p-4 border rounded-xl transition-all ${isExpired ? 'bg-rose-50 border-rose-200' : 'bg-white border-slate-200 hover:border-primary-300 hover:shadow-md'}`}>
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs">
+                                                    {order.customerName.charAt(0)}
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-slate-900 text-sm">{order.customerName}</h4>
+                                                    <p className="text-[10px] text-slate-500 font-mono">ID: {order.id.slice(-6)}</p>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <p className="text-xs text-slate-500">{order.items.length} items • Held: {order.date.toLocaleTimeString()}</p>
-                                        <p className={`text-xs font-medium mt-1 ${isExpired ? 'text-rose-600' : 'text-amber-600'}`}>
-                                            Expires: {order.expiration.toLocaleString()}
-                                        </p>
+                                        <Badge variant={isExpired ? 'danger' : 'warning'}>
+                                            {isExpired ? 'Expired' : 'On Hold'}
+                                        </Badge>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-bold text-slate-900 mr-2">{settings.currencySymbol}{order.total.toFixed(2)}</span>
-                                        <Button variant="secondary" size="sm" icon={<Trash2 size={14} />} onClick={() => deleteHeldOrder(order.id)} />
-                                        <Button size="sm" onClick={() => retrieveOrder(order)} disabled={isExpired}>Resume</Button>
+                                    
+                                    <div className="flex justify-between items-end border-t border-slate-100 pt-3 mt-1">
+                                        <div className="space-y-1">
+                                            <p className="text-xs text-slate-500 flex items-center gap-1">
+                                                <Clock size={12} /> Held {formatDistanceToNow(new Date(order.date))} ago
+                                            </p>
+                                            <p className="text-xs text-slate-500">
+                                                {order.items.length} Items • <span className="font-bold text-slate-900">{settings.currencySymbol}{order.total.toFixed(2)}</span>
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-full" onClick={() => deleteHeldOrder(order.id)}>
+                                                <Trash2 size={16} />
+                                            </Button>
+                                            <Button size="sm" onClick={() => retrieveOrder(order)} disabled={isExpired} icon={<RotateCcw size={14} />}>
+                                                Resume
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
                             );
