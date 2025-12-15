@@ -161,6 +161,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 setSettings(parsed.settings || DEFAULT_SETTINGS);
                 setRegisterSession(parsed.registerSession || null);
                 setStockAdjustments(parsed.stockAdjustments || []);
+                if (parsed.currentUser) {
+                    setCurrentUser(parsed.currentUser);
+                }
             }
             setIsLoaded(true);
         };
@@ -170,11 +173,11 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     useEffect(() => {
         if (isLoaded) {
             const dataToSave = {
-                products, suppliers, customers, users, expenses, invoices, purchases, ledger, roles, settings, registerSession, stockAdjustments
+                products, suppliers, customers, users, expenses, invoices, purchases, ledger, roles, settings, registerSession, stockAdjustments, currentUser
             };
             localStorage.setItem('POS_DATA_V1', JSON.stringify(dataToSave));
         }
-    }, [products, suppliers, customers, users, expenses, invoices, purchases, ledger, roles, settings, registerSession, stockAdjustments, isLoaded]);
+    }, [products, suppliers, customers, users, expenses, invoices, purchases, ledger, roles, settings, registerSession, stockAdjustments, currentUser, isLoaded]);
 
 
     // --- THEME APPLIER ---
