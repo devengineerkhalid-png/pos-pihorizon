@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { View, Product, User, Supplier, Expense, Invoice, Customer, Role, Purchase, AppSettings, CartItem, LedgerEntry, StockAdjustment, RegisterSession } from '../types';
+import { View, Product, User, Supplier, Expense, Invoice, Customer, Role, Purchase, AppSettings, CartItem, LedgerEntry, StockAdjustment, RegisterSession, ReturnItem, ReturnHistoryEntry } from '../types';
 
 // Mock Initial Data (Used only if LocalStorage is empty)
 const INITIAL_PRODUCTS: Product[] = Array.from({ length: 15 }).map((_, i) => ({
@@ -49,7 +49,8 @@ const INITIAL_PURCHASES: Purchase[] = [
         status: 'Received', 
         items: [{ productId: 'p1', productName: 'Widget A', quantity: 50, receivedQuantity: 50, cost: 25 }], 
         supplierId: 's-1',
-        receivedHistory: []
+        receivedHistory: [],
+        returnHistory: []
     }
 ];
 
@@ -97,7 +98,9 @@ interface StoreContextType {
     updateItem: (type: View, item: any) => void;
     deleteItem: (type: View, id: string) => void;
     updateSettings: (newSettings: Partial<AppSettings>) => void;
-    returnInvoice: (invoiceId: string) => void;
+    returnInvoice: (invoiceId: string) => void; // Deprecated in favor of processSalesReturn but kept for compatibility
+    processSalesReturn: (invoiceId: string, items: ReturnItem[]) => void;
+    returnPurchase: (purchaseId: string, items: ReturnItem[]) => void;
     
     // New Methods
     addStockAdjustment: (adjustment: Omit<StockAdjustment, 'id' | 'date' | 'costAmount'>) => void;
@@ -298,6 +301,163 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
     };
 
+    const returnPurchase = (purchaseId: string, items: ReturnItem[]) => {
+        const purchase = purchases.find(p => p.id === purchaseId);
+        if (!purchase) return;
+
+        const totalRefund = items.reduce((acc, item) => acc + item.refundAmount, 0);
+
+        // 1. Update Purchase Return History
+        const newHistory: ReturnHistoryEntry = {
+            id: `RET-${Date.now()}`,
+            date: new Date().toISOString(),
+            items: items,
+            totalRefund: totalRefund
+        };
+
+        const updatedPurchase: Purchase = {
+            ...purchase,
+            returnHistory: [newHistory, ...(purchase.returnHistory || [])]
+        };
+
+        setPurchases(prev => prev.map(p => p.id === purchaseId ? updatedPurchase : p));
+
+        // 2. Reduce Stock
+        let updatedProducts = [...products];
+        items.forEach(item => {
+            const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
+            if(productIndex > -1) {
+                // Ensure we don't go below zero, though validation should happen in UI
+                updatedProducts[productIndex].stock = Math.max(0, updatedProducts[productIndex].stock - item.quantity);
+            }
+        });
+        setProducts(updatedProducts);
+
+        // 3. Update Supplier Balance (Reduce what we owe)
+        setSuppliers(prev => prev.map(s => {
+            if (s.id === purchase.supplierId) {
+                return { ...s, balance: s.balance - totalRefund };
+            }
+            return s;
+        }));
+
+        // 4. Ledger Entries
+        // Debit Supplier (Decrease Liability) or Cash (if cash return)
+        addLedgerEntry({
+            date: new Date().toISOString().split('T')[0],
+            description: `Purchase Return for #${purchase.invoiceNumber}`,
+            referenceId: purchaseId,
+            type: 'DEBIT',
+            amount: totalRefund,
+            accountId: purchase.supplierId,
+            accountName: purchase.supplierName,
+            category: 'PURCHASE'
+        });
+
+        // Credit Inventory (Decrease Asset)
+        addLedgerEntry({
+            date: new Date().toISOString().split('T')[0],
+            description: `Stock Return Value #${purchase.invoiceNumber}`,
+            referenceId: purchaseId,
+            type: 'CREDIT',
+            amount: totalRefund,
+            accountId: 'INVENTORY',
+            accountName: 'Inventory Asset',
+            category: 'ADJUSTMENT'
+        });
+    };
+
+    const processSalesReturn = (invoiceId: string, items: ReturnItem[]) => {
+        const invoice = invoices.find(i => i.id === invoiceId);
+        if (!invoice) return;
+
+        const totalRefund = items.reduce((acc, item) => acc + item.refundAmount, 0);
+
+        // 1. Record Return in History
+        const returnEntry: ReturnHistoryEntry = {
+            id: `RET-SALE-${Date.now()}`,
+            date: new Date().toISOString(),
+            items: items,
+            totalRefund: totalRefund
+        };
+
+        // 2. Update Invoice: Add to history, update status, increment returnedQuantity on items
+        const updatedInvoice: Invoice = {
+            ...invoice,
+            returns: [returnEntry, ...(invoice.returns || [])],
+            // Check if all items fully returned? Simplification: If any return, status = Partial Refund or Returned
+            status: 'Partial Refund', 
+            items: invoice.items?.map(invItem => {
+                const returned = items.find(r => r.productId === invItem.id); // Note: assuming productId matches cartItem.id
+                if (returned) {
+                    return { ...invItem, returnedQuantity: (invItem.returnedQuantity || 0) + returned.quantity };
+                }
+                return invItem;
+            })
+        };
+
+        // If total refunded >= total paid, mark as Returned
+        const totalRefundedSoFar = (updatedInvoice.returns || []).reduce((acc, r) => acc + r.totalRefund, 0);
+        if (totalRefundedSoFar >= updatedInvoice.total) {
+            updatedInvoice.status = 'Returned';
+        }
+
+        setInvoices(prev => prev.map(i => i.id === invoiceId ? updatedInvoice : i));
+
+        // 3. Restore Stock (Only for non-custom/borrowed items generally, but simplifed here)
+        let updatedProducts = [...products];
+        items.forEach(item => {
+            const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
+            if(productIndex > -1) {
+                updatedProducts[productIndex].stock += item.quantity;
+            }
+        });
+        setProducts(updatedProducts);
+
+        // 4. Ledger: Debit Sales Returns, Credit Cash
+        addLedgerEntry({
+            date: new Date().toISOString().split('T')[0],
+            description: `Sales Refund for #${invoiceId}`,
+            referenceId: invoiceId,
+            type: 'DEBIT',
+            amount: totalRefund,
+            accountId: 'SALES',
+            accountName: 'Sales Returns',
+            category: 'SALES'
+        });
+         addLedgerEntry({
+            date: new Date().toISOString().split('T')[0],
+            description: `Cash Refund Paid #${invoiceId}`,
+            referenceId: invoiceId,
+            type: 'CREDIT',
+            amount: totalRefund,
+            accountId: 'CASH',
+            accountName: 'Cash Drawer',
+            category: 'SALES'
+        });
+
+        // 5. Adjust Loyalty (Remove points earned on returned items)
+        const customer = customers.find(c => c.name === invoice.customerName);
+        if(customer) {
+            // Approx: 1 point per $1.
+            const pointsToRemove = Math.floor(totalRefund);
+            setCustomers(prev => prev.map(c => 
+                c.id === customer.id ? { ...c, loyaltyPoints: Math.max(0, c.loyaltyPoints - pointsToRemove) } : c
+            ));
+        }
+
+        // 6. Update Register if Open (Cash Refund reduces cash)
+        if (registerSession && registerSession.status === 'OPEN' && invoice.paymentMethod === 'Cash') {
+             // Technically a refund should reduce expected balance
+             // or track as a separate 'Refunds' line.
+             // We'll reduce totalSales to keep it simple, or add a 'returns' field to session
+             setRegisterSession({
+                 ...registerSession,
+                 expectedBalance: registerSession.expectedBalance - totalRefund
+             });
+        }
+    };
+
     const addItem = (type: View, item: any) => {
         const itemWithId = { ...item, id: item.id || Date.now().toString() };
         const today = new Date().toISOString().split('T')[0];
@@ -410,7 +570,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                             })),
                             total: totalCost,
                             status: 'Received', 
-                            receivedHistory: []
+                            receivedHistory: [],
+                            returnHistory: []
                         };
                         setPurchases(prev => [purchase, ...prev]);
 
@@ -430,6 +591,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         } 
         else if (type === View.PURCHASES) {
              const pur = item as Purchase;
+             // Ensure returnHistory exists
+             pur.returnHistory = [];
+             
              addLedgerEntry({
                 date: today,
                 description: `Purchase Invoice ${pur.invoiceNumber}`,
@@ -508,60 +672,19 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
 
     const returnInvoice = (invoiceId: string) => {
-        const invoice = invoices.find(i => i.id === invoiceId);
-        if(!invoice) return;
-
-        const updatedInvoice = { ...invoice, status: 'Returned' as const };
-        updateItem(View.INVOICES, updatedInvoice);
-
-        // Reverse Loyalty Points
-        const customer = customers.find(c => c.name === invoice.customerName);
-        if(customer) {
-            let pts = customer.loyaltyPoints || 0;
-            if(invoice.loyaltyPointsEarned) pts -= invoice.loyaltyPointsEarned;
-            if(invoice.loyaltyPointsUsed) pts += invoice.loyaltyPointsUsed;
-            const updatedCustomers = customers.map(c => c.id === customer.id ? {...c, loyaltyPoints: pts} : c);
-            setCustomers(updatedCustomers);
-        }
-
-        // Ledger
-        addLedgerEntry({
-            date: new Date().toISOString().split('T')[0],
-            description: `REFUND Invoice #${invoice.id}`,
-            referenceId: invoice.id,
-            type: 'DEBIT',
-            amount: invoice.total,
-            accountId: 'SALES',
-            accountName: 'Sales Return',
-            category: 'ADJUSTMENT'
-        });
-        addLedgerEntry({
-            date: new Date().toISOString().split('T')[0],
-            description: `Refund Payout #${invoice.id}`,
-            referenceId: invoice.id,
-            type: 'CREDIT',
-            amount: invoice.total,
-            accountId: 'CASH',
-            accountName: 'Cash',
-            category: 'ADJUSTMENT'
-        });
-
-        if (invoice.items) {
-            const updatedProducts = [...products];
-            invoice.items.forEach(cartItem => {
-                if (cartItem.isCustom || cartItem.isBorrowed) return; 
-                
-                const productIndex = updatedProducts.findIndex(p => p.id === cartItem.id);
-                if (productIndex > -1) {
-                    if (cartItem.variantId) {
-                         const variant = updatedProducts[productIndex].variants?.find(v => v.id === cartItem.variantId);
-                         if(variant) variant.stock += cartItem.quantity;
-                    } else {
-                         updatedProducts[productIndex].stock += cartItem.quantity;
-                    }
-                }
-            });
-            setProducts(updatedProducts);
+        // Deprecated simple toggle, but maintained for compatibility if called elsewhere.
+        // It now redirects to a full return logic if possible, or just does a basic reversal.
+        // For now, we will just use the new logic assuming full return.
+        const inv = invoices.find(i => i.id === invoiceId);
+        if(inv && inv.items) {
+            const itemsToReturn = inv.items.map(i => ({
+                productId: i.id,
+                productName: i.name,
+                quantity: i.quantity,
+                reason: 'Full Return',
+                refundAmount: i.price * i.quantity
+            }));
+            processSalesReturn(invoiceId, itemsToReturn);
         }
     };
 
@@ -574,7 +697,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return (
         <StoreContext.Provider value={{
             products, suppliers, customers, users, expenses, invoices, roles, purchases, settings, ledger, registerSession, stockAdjustments, currentUser,
-            addItem, updateItem, deleteItem, updateSettings, returnInvoice, addStockAdjustment, openRegister, closeRegister, login, logout, registerUser
+            addItem, updateItem, deleteItem, updateSettings, returnInvoice, addStockAdjustment, openRegister, closeRegister, login, logout, registerUser, returnPurchase, processSalesReturn
         }}>
             {children}
         </StoreContext.Provider>

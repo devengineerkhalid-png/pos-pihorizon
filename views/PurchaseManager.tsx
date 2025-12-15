@@ -1,14 +1,16 @@
+
 import React, { useState } from 'react';
 import { Button, Input, Table, Modal, Badge, Select, Card } from '../components/UIComponents';
-import { Plus, Search, Filter, Trash2, Calendar, User, Save, ArrowLeft, Package, Clock, CheckCircle, Truck, History } from 'lucide-react';
+import { Plus, Search, Filter, Trash2, Calendar, User, Save, ArrowLeft, Package, Clock, CheckCircle, Truck, History, RotateCcw, Reply } from 'lucide-react';
 import { Purchase, PurchaseItem, PurchaseHistoryEntry, View } from '../types';
 import { useStore } from '../context/StoreContext';
 
 export const PurchaseManager: React.FC = () => {
-    const { purchases, addItem, updateItem, suppliers } = useStore();
+    const { purchases, addItem, updateItem, suppliers, returnPurchase } = useStore();
     const [viewMode, setViewMode] = useState<'LIST' | 'CREATE' | 'DETAIL'>('LIST');
     const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
     const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
+    const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
     
     // Create State
     const [createType, setCreateType] = useState<'INVOICE' | 'ORDER'>('ORDER');
@@ -22,6 +24,9 @@ export const PurchaseManager: React.FC = () => {
 
     // Receive Modal State
     const [receivingItems, setReceivingItems] = useState<{id: string, qty: number, batch: string, expiry: string}[]>([]);
+
+    // Return Modal State
+    const [returnItems, setReturnItems] = useState<{id: string, qty: number, reason: string}[]>([]);
 
     const handleAddItem = () => {
         if(!newItem.productName || !newItem.quantity || !newItem.cost) return;
@@ -50,7 +55,8 @@ export const PurchaseManager: React.FC = () => {
             items: items,
             total: items.reduce((sum, i) => sum + (i.quantity * i.cost), 0),
             status: createType === 'INVOICE' ? 'Received' : 'Ordered',
-            receivedHistory: []
+            receivedHistory: [],
+            returnHistory: []
         };
         
         if(createType === 'INVOICE') {
@@ -137,6 +143,65 @@ export const PurchaseManager: React.FC = () => {
         setSelectedPurchase(updatedPurchase); // Update local view
         setIsReceiveModalOpen(false);
     };
+
+    const openReturnModal = () => {
+        if (!selectedPurchase) return;
+        // Init state for all received items
+        const initReturns = selectedPurchase.items
+            .filter(i => i.receivedQuantity > 0)
+            .map(i => ({
+                id: i.productId,
+                qty: 0,
+                reason: 'Damaged'
+            }));
+        setReturnItems(initReturns);
+        setIsReturnModalOpen(true);
+    };
+
+    const handleConfirmReturn = () => {
+        if(!selectedPurchase) return;
+        
+        const validReturns = returnItems.filter(r => r.qty > 0);
+        if(validReturns.length === 0) return;
+
+        const returnPayload = validReturns.map(r => {
+            const originalItem = selectedPurchase.items.find(i => i.productId === r.id);
+            return {
+                productId: r.id,
+                productName: originalItem?.productName || 'Unknown',
+                quantity: r.qty,
+                reason: r.reason,
+                refundAmount: r.qty * (originalItem?.cost || 0)
+            };
+        });
+
+        returnPurchase(selectedPurchase.id, returnPayload);
+        
+        // Refresh local selected view by finding it again from updated store
+        // However, returnPurchase updates store which triggers re-render, 
+        // but local 'selectedPurchase' state might be stale.
+        // We'll optimistically update it or refetch. 
+        // For simplicity, close modal and update local state manually based on payload.
+        
+        // Note: returnPurchase updates returnHistory in store. To see it immediately,
+        // we should rely on store data or manual update.
+        // Let's manually update 'selectedPurchase' returnHistory for the UI immediately
+        const totalRefund = returnPayload.reduce((acc, item) => acc + item.refundAmount, 0);
+        const newHistoryEntry = {
+             id: `RET-${Date.now()}`,
+             date: new Date().toISOString(),
+             items: returnPayload,
+             totalRefund: totalRefund
+        };
+        
+        setSelectedPurchase(prev => prev ? ({
+            ...prev,
+            returnHistory: [newHistoryEntry, ...(prev.returnHistory || [])]
+        }) : null);
+
+        setIsReturnModalOpen(false);
+    };
+
 
     // --- RENDER HELPERS ---
 
@@ -288,9 +353,12 @@ export const PurchaseManager: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                    {selectedPurchase.type === 'ORDER' && selectedPurchase.status !== 'Completed' && (
-                        <Button onClick={openReceiveModal} icon={<Truck size={18} />}>Receive Stock</Button>
-                    )}
+                    <div className="flex gap-2">
+                         <Button onClick={openReturnModal} variant="secondary" icon={<Reply size={18} />} className="text-rose-600 border-rose-200 hover:bg-rose-50">Return Items</Button>
+                         {selectedPurchase.type === 'ORDER' && selectedPurchase.status !== 'Completed' && (
+                            <Button onClick={openReceiveModal} icon={<Truck size={18} />}>Receive Stock</Button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -353,6 +421,37 @@ export const PurchaseManager: React.FC = () => {
                                 </div>
                             )}
                         </Card>
+
+                        {/* Return History */}
+                        {(selectedPurchase.returnHistory && selectedPurchase.returnHistory.length > 0) && (
+                             <Card title="Return History" icon={<RotateCcw size={18} />} className="border-rose-100 bg-rose-50/10">
+                                <div className="space-y-4">
+                                     {selectedPurchase.returnHistory.map(ret => (
+                                         <div key={ret.id} className="p-4 bg-white rounded-lg border border-rose-100 shadow-sm">
+                                             <div className="flex justify-between mb-2 pb-2 border-b border-rose-50">
+                                                 <div className="flex items-center gap-2">
+                                                     <div className="bg-rose-100 p-1 rounded text-rose-600"><RotateCcw size={12} /></div>
+                                                     <span className="font-bold text-rose-700">Returned Items</span>
+                                                 </div>
+                                                 <span className="text-xs text-slate-400">{new Date(ret.date).toLocaleString()}</span>
+                                             </div>
+                                             <div className="space-y-1">
+                                                 {ret.items.map((item, idx) => (
+                                                     <div key={idx} className="flex justify-between text-sm">
+                                                         <span className="text-slate-700">{item.productName} <span className="text-xs text-slate-400 italic">- {item.reason}</span></span>
+                                                         <span className="font-medium text-rose-600">-{item.quantity}</span>
+                                                     </div>
+                                                 ))}
+                                             </div>
+                                             <div className="mt-2 pt-2 border-t border-slate-50 flex justify-end">
+                                                 <span className="text-xs font-bold text-slate-500 uppercase tracking-wide mr-2">Refund Value:</span>
+                                                 <span className="font-bold text-rose-600">${ret.totalRefund.toFixed(2)}</span>
+                                             </div>
+                                         </div>
+                                     ))}
+                                </div>
+                             </Card>
+                        )}
                     </div>
 
                     <div className="space-y-6">
@@ -420,6 +519,53 @@ export const PurchaseManager: React.FC = () => {
                         <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
                             <Button variant="secondary" onClick={() => setIsReceiveModalOpen(false)}>Cancel</Button>
                             <Button onClick={handleConfirmReceive}>Confirm Reception</Button>
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* Return Modal */}
+                <Modal isOpen={isReturnModalOpen} onClose={() => setIsReturnModalOpen(false)} title="Return Purchased Items">
+                    <div className="space-y-4">
+                         <div className="bg-rose-50 p-3 rounded-lg border border-rose-100 text-sm text-rose-800">
+                             <p><strong>Warning:</strong> Returning items will deduct them from your current stock and adjust the supplier balance (Accounts Payable).</p>
+                         </div>
+                        <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-4">
+                            {selectedPurchase.items.map((item) => {
+                                // Can only return what has been received
+                                const returnable = item.receivedQuantity;
+                                if(returnable <= 0) return null;
+                                
+                                const currentEntry = returnItems.find(r => r.id === item.productId) || {qty: 0, reason: 'Damaged'};
+
+                                return (
+                                    <div key={item.productId} className="p-3 border border-slate-200 rounded-lg bg-slate-50">
+                                        <div className="flex justify-between mb-2">
+                                            <span className="font-medium text-sm text-slate-900">{item.productName}</span>
+                                            <span className="text-xs text-slate-500">Received: {returnable}</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Input 
+                                                type="number" 
+                                                placeholder="Return Qty" 
+                                                value={currentEntry.qty || ''}
+                                                onChange={(e) => {
+                                                    const val = Math.min(returnable, Number(e.target.value));
+                                                    setReturnItems(returnItems.map(r => r.id === item.productId ? {...r, qty: val} : r));
+                                                }}
+                                            />
+                                            <Select 
+                                                options={[{value: 'Damaged', label: 'Damaged'}, {value: 'Wrong Item', label: 'Wrong Item'}, {value: 'Excess', label: 'Excess'}]}
+                                                value={currentEntry.reason}
+                                                onChange={(e) => setReturnItems(returnItems.map(r => r.id === item.productId ? {...r, reason: e.target.value} : r))}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                            <Button variant="secondary" onClick={() => setIsReturnModalOpen(false)}>Cancel</Button>
+                            <Button variant="danger" onClick={handleConfirmReturn}>Confirm Return</Button>
                         </div>
                     </div>
                 </Modal>

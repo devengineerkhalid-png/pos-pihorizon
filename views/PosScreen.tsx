@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Input, Button, Badge, Modal, Select } from '../components/UIComponents';
-import { Search, Trash2, Plus, Minus, User, PauseCircle, CreditCard, ShoppingCart, Layers, Tag, RotateCcw, PenTool, Badge as BadgeIcon, Printer, CheckCircle, ArrowRight, Truck, Clock, AlertCircle, PlusCircle, UserPlus, Gift } from 'lucide-react';
-import { Product, CartItem, ProductVariant, HeldOrder, View } from '../types';
+import { Search, Trash2, Plus, Minus, User, PauseCircle, CreditCard, ShoppingCart, Layers, Tag, RotateCcw, PenTool, Badge as BadgeIcon, Printer, CheckCircle, ArrowRight, Truck, Clock, AlertCircle, PlusCircle, UserPlus, Gift, FileText, Reply } from 'lucide-react';
+import { Product, CartItem, ProductVariant, HeldOrder, View, Invoice, ReturnItem } from '../types';
 import { useStore } from '../context/StoreContext';
 
 const CATEGORIES = ['All Items', 'Electronics', 'Apparel', 'Home', 'Beauty', 'Sports', 'Toys'];
 
 export const PosScreen: React.FC = () => {
-    const { products, customers, suppliers, addItem, settings } = useStore();
+    const { products, customers, suppliers, addItem, settings, invoices, processSalesReturn } = useStore();
 
     const [cart, setCart] = useState<CartItem[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -22,6 +22,12 @@ export const PosScreen: React.FC = () => {
     const [showCustomItem, setShowCustomItem] = useState(false);
     const [showBorrowItem, setShowBorrowItem] = useState(false);
     const [showHoldDuration, setShowHoldDuration] = useState(false);
+    
+    // Return Modal State
+    const [showReturns, setShowReturns] = useState(false);
+    const [returnSearch, setReturnSearch] = useState('');
+    const [foundInvoice, setFoundInvoice] = useState<Invoice | null>(null);
+    const [returnSelection, setReturnSelection] = useState<ReturnItem[]>([]);
     
     // State
     const [cartDiscount, setCartDiscount] = useState(0); 
@@ -265,6 +271,59 @@ export const PosScreen: React.FC = () => {
         setSelectedCustomer('Walk-in Customer');
     };
 
+    // Return Logic
+    const handleSearchInvoice = () => {
+        const invoice = invoices.find(i => i.id.toLowerCase() === returnSearch.toLowerCase());
+        if(invoice) {
+            setFoundInvoice(invoice);
+            // Initialize return selection with 0 qty
+            const initItems = invoice.items?.map(item => ({
+                productId: item.id,
+                productName: item.name,
+                quantity: 0,
+                reason: 'Defective',
+                refundAmount: 0
+            })) || [];
+            setReturnSelection(initItems);
+        } else {
+            alert("Invoice not found");
+            setFoundInvoice(null);
+        }
+    };
+
+    const updateReturnQty = (itemId: string, qty: number) => {
+        if(!foundInvoice) return;
+        const originalItem = foundInvoice.items?.find(i => i.id === itemId);
+        if(!originalItem) return;
+
+        // Max returnable = Original Qty - Already Returned Qty
+        const maxReturn = originalItem.quantity - (originalItem.returnedQuantity || 0);
+        const validQty = Math.min(Math.max(0, qty), maxReturn);
+
+        setReturnSelection(prev => prev.map(item => {
+            if (item.productId === itemId) {
+                return { 
+                    ...item, 
+                    quantity: validQty,
+                    refundAmount: validQty * originalItem.price // Simple refund calc
+                };
+            }
+            return item;
+        }));
+    };
+
+    const submitReturn = () => {
+        if(!foundInvoice) return;
+        const itemsToReturn = returnSelection.filter(i => i.quantity > 0);
+        if(itemsToReturn.length === 0) return;
+
+        processSalesReturn(foundInvoice.id, itemsToReturn);
+        alert("Refund processed successfully.");
+        setShowReturns(false);
+        setFoundInvoice(null);
+        setReturnSearch('');
+    };
+
     return (
         <div className="flex h-[calc(100vh-2rem)] gap-6">
             {/* Left Side - Product Catalog */}
@@ -283,6 +342,7 @@ export const PosScreen: React.FC = () => {
                     <div className="flex gap-2">
                          <Button variant="outline" onClick={() => setShowCustomItem(true)} icon={<PenTool size={16} />}>Custom</Button>
                          <Button variant="outline" onClick={() => setShowBorrowItem(true)} icon={<Truck size={16} />}>Borrow</Button>
+                         <Button variant="danger" className="bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100" onClick={() => setShowReturns(true)} icon={<Reply size={16} />}>Returns</Button>
                     </div>
                 </div>
 
@@ -794,6 +854,75 @@ export const PosScreen: React.FC = () => {
                             </button>
                         ))}
                     </div>
+                </div>
+            </Modal>
+
+            {/* Sales Return Modal - NEW */}
+            <Modal isOpen={showReturns} onClose={() => { setShowReturns(false); setFoundInvoice(null); setReturnSearch(''); }} title="Process Sales Return">
+                <div className="space-y-6">
+                    {!foundInvoice ? (
+                        <div className="space-y-4">
+                            <p className="text-slate-500 text-sm">Enter the Invoice ID (e.g. INV-123456) to start a return.</p>
+                            <div className="flex gap-2">
+                                <Input 
+                                    placeholder="Enter Invoice ID" 
+                                    value={returnSearch} 
+                                    onChange={e => setReturnSearch(e.target.value)} 
+                                    autoFocus
+                                />
+                                <Button onClick={handleSearchInvoice}>Find</Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-right-4">
+                             <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 flex justify-between items-center">
+                                 <div>
+                                     <h4 className="font-bold text-slate-900">{foundInvoice.id}</h4>
+                                     <p className="text-xs text-slate-500">{new Date(foundInvoice.date).toLocaleDateString()} • {foundInvoice.customerName}</p>
+                                 </div>
+                                 <Button variant="ghost" size="sm" onClick={() => { setFoundInvoice(null); setReturnSearch(''); }}>Change</Button>
+                             </div>
+
+                             <div className="max-h-[40vh] overflow-y-auto space-y-2 pr-2">
+                                 {foundInvoice.items?.map(item => {
+                                     // Calculate how many are left to return
+                                     const previouslyReturned = item.returnedQuantity || 0;
+                                     const remainingQty = item.quantity - previouslyReturned;
+                                     const currentReturn = returnSelection.find(r => r.productId === item.id)?.quantity || 0;
+                                     
+                                     if (remainingQty <= 0) return null;
+
+                                     return (
+                                         <div key={item.id} className="p-3 border border-slate-200 rounded-lg flex justify-between items-center">
+                                             <div>
+                                                 <p className="font-medium text-sm">{item.name}</p>
+                                                 <p className="text-xs text-slate-500">Sold: {item.quantity} | Prev. Returned: {previouslyReturned}</p>
+                                             </div>
+                                             <div className="flex items-center gap-3">
+                                                 <span className="font-bold text-sm text-slate-700">{settings.currencySymbol}{(item.price * currentReturn).toFixed(2)}</span>
+                                                 <div className="flex items-center border border-slate-200 rounded-md bg-white">
+                                                     <button onClick={() => updateReturnQty(item.id, currentReturn - 1)} className="p-1 hover:bg-slate-100"><Minus size={14} /></button>
+                                                     <span className="w-8 text-center text-sm font-medium">{currentReturn}</span>
+                                                     <button onClick={() => updateReturnQty(item.id, currentReturn + 1)} className="p-1 hover:bg-slate-100"><Plus size={14} /></button>
+                                                 </div>
+                                             </div>
+                                         </div>
+                                     );
+                                 })}
+                             </div>
+
+                             <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
+                                 <div>
+                                     <p className="text-sm text-slate-500">Total Refund</p>
+                                     <p className="text-xl font-bold text-slate-900">{settings.currencySymbol}{returnSelection.reduce((acc, i) => acc + i.refundAmount, 0).toFixed(2)}</p>
+                                 </div>
+                                 <div className="flex gap-2">
+                                     <Button variant="secondary" onClick={() => { setShowReturns(false); setFoundInvoice(null); }}>Cancel</Button>
+                                     <Button variant="danger" onClick={submitReturn} disabled={returnSelection.every(i => i.quantity === 0)}>Confirm Refund</Button>
+                                 </div>
+                             </div>
+                        </div>
+                    )}
                 </div>
             </Modal>
 

@@ -73,6 +73,7 @@ export interface CartItem extends Product {
   isBorrowed?: boolean; // New: Item borrowed from supplier
   borrowedSupplierId?: string; // New: ID of supplier
   borrowedCost?: number; // New: Cost of borrowing
+  returnedQuantity?: number; // New: Track how many have been returned
 }
 
 export interface HeldOrder {
@@ -148,6 +149,22 @@ export interface PurchaseHistoryEntry {
     note?: string;
 }
 
+export interface ReturnItem {
+    productId: string;
+    productName: string;
+    quantity: number;
+    reason: string;
+    refundAmount: number;
+}
+
+export interface ReturnHistoryEntry {
+    id: string;
+    date: string;
+    items: ReturnItem[];
+    totalRefund: number;
+    note?: string;
+}
+
 export interface Purchase {
     id: string;
     type: 'INVOICE' | 'ORDER';
@@ -159,6 +176,7 @@ export interface Purchase {
     total: number;
     status: 'Received' | 'Pending' | 'Ordered' | 'Partial' | 'Completed' | 'Returned';
     receivedHistory: PurchaseHistoryEntry[];
+    returnHistory: ReturnHistoryEntry[];
 }
 
 export interface Expense {
@@ -176,11 +194,12 @@ export interface Invoice {
   customerName: string;
   date: string;
   total: number;
-  status: 'Paid' | 'Pending' | 'Returned'; 
+  status: 'Paid' | 'Pending' | 'Returned' | 'Partial Refund'; 
   items?: CartItem[];
   paymentMethod?: string;
   loyaltyPointsUsed?: number; // New: Points redeemed
   loyaltyPointsEarned?: number; // New: Points gained
+  returns?: ReturnHistoryEntry[]; // New: Track return history
 }
 
 export interface LedgerEntry {
