@@ -138,6 +138,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                             type="email"
                             value={email}
                             onChange={e => setEmail(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleLogin()}
                             error={error}
                             autoFocus
                         />
@@ -165,7 +166,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                         <p className="text-slate-500 mt-2">Enter the 6-digit code sent to <span className="text-slate-900 font-medium">{email}</span></p>
                     </div>
                     <div className="space-y-6">
-                        <Input className="text-center text-3xl tracking-[1em] font-mono h-14" maxLength={6} placeholder="000000" autoFocus />
+                        <Input 
+                            className="text-center text-3xl tracking-[1em] font-mono h-14" 
+                            maxLength={6} 
+                            placeholder="000000" 
+                            onKeyDown={e => e.key === 'Enter' && handleOtp()}
+                            autoFocus 
+                        />
                         <Button className="w-full h-12 text-base" onClick={handleOtp} isLoading={isLoading}>Verify Code</Button>
                         <button onClick={() => setStep(AuthState.LOGIN)} className="w-full text-sm text-slate-500 hover:text-slate-900 mt-4">Change email address</button>
                     </div>
@@ -190,6 +197,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                             maxLength={4} 
                             value={pin}
                             onChange={e => setPin(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && (step === AuthState.SET_PIN ? handleSetPin() : handleConfirmPin())}
                             error={error}
                             autoFocus
                             placeholder="••••"
@@ -218,6 +226,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthenticated }) => {
                             maxLength={4} 
                             value={pin}
                             onChange={e => setPin(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handlePinLogin()}
                             error={error}
                             autoFocus
                             placeholder="••••"

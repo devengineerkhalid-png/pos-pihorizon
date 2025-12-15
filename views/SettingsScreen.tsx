@@ -140,7 +140,13 @@ export const SettingsScreen: React.FC = () => {
                             <div className="grid grid-cols-2 gap-6">
                                 <Select 
                                     label="Currency Symbol" 
-                                    options={[{value: '$', label: 'USD ($)'}, {value: '€', label: 'EUR (€)'}, {value: '£', label: 'GBP (£)'}]} 
+                                    options={[
+                                        {value: '$', label: 'USD ($)'},
+                                        {value: '€', label: 'EUR (€)'},
+                                        {value: '£', label: 'GBP (£)'},
+                                        {value: 'Rs', label: 'PKR (Rs)'},
+                                        {value: '₹', label: 'INR (₹)'}
+                                    ]} 
                                     value={formData.currencySymbol}
                                     onChange={e => handleChange('currencySymbol', e.target.value)}
                                 />

@@ -59,23 +59,30 @@ const INITIAL_LEDGER: LedgerEntry[] = [
 ];
 
 const DEFAULT_SETTINGS: AppSettings = {
-    currency: 'USD',
-    currencySymbol: '$',
+    currency: 'PKR',
+    currencySymbol: 'Rs',
     taxRate: 10,
     shopName: 'My POS Store',
     address: '123 Commerce St, New York, NY',
     phone: '+1 234 567 890',
     email: 'contact@store.com',
     themeMode: 'light',
-    accentColor: 'indigo'
+    accentColor: 'blue' // Updated default to Blue
 };
 
+// Refined "Modern" Color Palettes
 const THEME_COLORS = {
-    indigo: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' },
-    emerald: { 50: '#ecfdf5', 100: '#d1fae5', 500: '#10b981', 600: '#059669', 700: '#047857' },
-    rose: { 50: '#fff1f2', 100: '#ffe4e6', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c' },
-    amber: { 50: '#fffbeb', 100: '#fef3c7', 500: '#f59e0b', 600: '#d97706', 700: '#b45309' },
+    // Professional Royal Blue (Trust, Calm)
     blue: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+    // Deep Digital Indigo (Tech, Modern)
+    indigo: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' },
+    // Mint / Emerald (Financial, Fresh)
+    emerald: { 50: '#ecfdf5', 100: '#d1fae5', 500: '#10b981', 600: '#059669', 700: '#047857' },
+    // Vibrant Rose (Action, Alert)
+    rose: { 50: '#fff1f2', 100: '#ffe4e6', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c' },
+    // Warm Amber (Energy, Retail)
+    amber: { 50: '#fffbeb', 100: '#fef3c7', 500: '#f59e0b', 600: '#d97706', 700: '#b45309' },
+    // Creative Violet (Premium, Artistic)
     violet: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#8b5cf6', 600: '#7c3aed', 700: '#6d28d9' },
 };
 

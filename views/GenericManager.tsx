@@ -11,7 +11,7 @@ interface ManagerProps {
 
 export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
     const { 
-        products, suppliers, customers, users, expenses, invoices, roles,
+        products, suppliers, customers, users, expenses, invoices, roles, settings,
         addItem, updateItem, deleteItem, returnInvoice, addStockAdjustment
     } = useStore();
 
@@ -256,14 +256,14 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
                     { header: 'Business Name', accessor: 'businessName' },
                     { header: 'Contact Person', accessor: 'name' },
                     { header: 'Phone', accessor: 'phone' },
-                    { header: 'Balance', accessor: (item: any) => <span className={item.balance > 0 ? 'text-rose-600 font-medium' : 'text-emerald-600 font-medium'}>${Math.abs(item.balance).toFixed(2)} {item.balance > 0 ? 'Due' : 'Cr'}</span> }
+                    { header: 'Balance', accessor: (item: any) => <span className={item.balance > 0 ? 'text-rose-600 font-medium' : 'text-emerald-600 font-medium'}>{settings.currencySymbol}{Math.abs(item.balance).toFixed(2)} {item.balance > 0 ? 'Due' : 'Cr'}</span> }
                 ];
             case View.EXPENSES:
                 return [
                     { header: 'Expense Title', accessor: 'title' },
                     { header: 'Category', accessor: 'category' },
                     { header: 'Date', accessor: 'date' },
-                    { header: 'Amount', accessor: (item: any) => <span className="font-bold text-slate-900">${item.amount.toFixed(2)}</span> },
+                    { header: 'Amount', accessor: (item: any) => <span className="font-bold text-slate-900">{settings.currencySymbol}{item.amount.toFixed(2)}</span> },
                     { header: 'Status', accessor: (item: any) => <Badge variant={item.status === 'Paid' ? 'success' : 'warning'}>{item.status}</Badge> }
                 ];
             case View.PRODUCTS:
@@ -285,14 +285,14 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
                             <div className="text-slate-500">{item.location || 'Main'}</div>
                         </div>
                     )},
-                    { header: 'Price', accessor: (item: any) => <span className="font-medium">${item.price?.toFixed(2)}</span> },
+                    { header: 'Price', accessor: (item: any) => <span className="font-medium">{settings.currencySymbol}{item.price?.toFixed(2)}</span> },
                     { header: 'Supplier', accessor: 'supplier' }
                 ];
             case View.CUSTOMERS:
                 return [
                     { header: 'Name', accessor: 'name' },
                     { header: 'Phone', accessor: 'phone' },
-                    { header: 'Total Spent', accessor: (item: any) => `$${item.totalPurchases?.toFixed(2) || '0.00'}` },
+                    { header: 'Total Spent', accessor: (item: any) => `${settings.currencySymbol}${item.totalPurchases?.toFixed(2) || '0.00'}` },
                     { header: 'Loyalty Pts', accessor: (item: any) => <Badge variant="neutral">{item.loyaltyPoints || 0}</Badge> },
                     { header: 'Last Visit', accessor: 'lastVisit' }
                 ];
@@ -301,7 +301,7 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
                     { header: 'Invoice #', accessor: 'id' },
                     { header: 'Customer', accessor: 'customerName' },
                     { header: 'Date', accessor: 'date' },
-                    { header: 'Total', accessor: (item: any) => `$${item.total.toFixed(2)}` },
+                    { header: 'Total', accessor: (item: any) => `${settings.currencySymbol}${item.total.toFixed(2)}` },
                     { header: 'Status', accessor: (item: any) => <Badge variant={item.status === 'Paid' ? 'success' : item.status === 'Returned' ? 'danger' : 'warning'}>{item.status}</Badge> }
                 ];
             default: return [{ header: 'Name', accessor: 'name' }];
@@ -447,7 +447,7 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
                                     <QrCode size={120} className="text-slate-900" />
                                 </div>
                                 <p className="font-mono text-sm text-slate-500 mt-2">{labelProduct.sku}</p>
-                                <p className="font-bold text-xl mt-1">${labelProduct.price.toFixed(2)}</p>
+                                <p className="font-bold text-xl mt-1">{settings.currencySymbol}{labelProduct.price.toFixed(2)}</p>
                             </div>
                         </div>
                         <div className="flex justify-center gap-4">
@@ -547,7 +547,7 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
                                     {tempVariants.map(v => (
                                         <div key={v.id} className="flex items-center justify-between bg-white dark:bg-slate-700 p-2 rounded border border-slate-200 dark:border-slate-600 text-sm">
                                             <span className="dark:text-white">{v.name} ({v.sku})</span>
-                                            <span className="font-bold dark:text-white">${v.price}</span>
+                                            <span className="font-bold dark:text-white">{settings.currencySymbol}{v.price}</span>
                                         </div>
                                     ))}
                                     <div className="grid grid-cols-6 gap-2 items-end bg-white dark:bg-slate-700 p-3 rounded border border-slate-200 dark:border-slate-600">

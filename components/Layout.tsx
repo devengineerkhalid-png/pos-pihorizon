@@ -77,22 +77,22 @@ export const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, onLogou
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden font-sans transition-colors duration-200">
       {/* Sidebar */}
       <aside 
-        className={`${isSidebarOpen ? 'w-64' : 'w-16'} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 z-30 relative`}
+        className={`${isSidebarOpen ? 'w-64' : 'w-20'} bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col transition-all duration-300 z-30 relative`}
       >
         {/* Sidebar Header */}
-        <div className="h-16 flex items-center px-4 border-b border-slate-100 dark:border-slate-800 mb-2">
+        <div className="h-16 flex items-center px-6 border-b border-slate-100 dark:border-slate-800 mb-2">
            <div className={`flex items-center gap-3 w-full ${!isSidebarOpen && 'justify-center'}`}>
-              <div className="h-8 w-8 bg-slate-900 dark:bg-white rounded-lg flex items-center justify-center text-white dark:text-slate-900 font-bold shadow-sm">
+              <div className="h-9 w-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-primary-500/30">
                 P
               </div>
               {isSidebarOpen && (
-                 <span className="font-bold text-slate-800 dark:text-white tracking-tight text-base">POS <span className="text-slate-400 font-normal">System</span></span>
+                 <span className="font-bold text-slate-800 dark:text-white tracking-tight text-lg">POS <span className="text-primary-600 font-normal">Pro</span></span>
               )}
            </div>
         </div>
 
         {/* Scrollable Nav */}
-        <div className="flex-1 overflow-y-auto py-4 px-2 space-y-6 no-scrollbar">
+        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6 no-scrollbar">
             {navGroups.map((group, idx) => {
                 const visibleItems = group.items.filter(item => hasPermission(item.req || ''));
                 if (visibleItems.length === 0) return null;
@@ -112,21 +112,26 @@ export const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, onLogou
                                         key={item.view}
                                         onClick={() => onNavigate(item.view)}
                                         className={`
-                                            w-full flex items-center py-2 px-3 rounded-lg transition-all duration-200 group relative
+                                            w-full flex items-center py-2.5 px-3 rounded-xl transition-all duration-200 group relative
                                             ${isActive 
-                                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-medium' 
-                                                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-200'
+                                                ? 'bg-primary-600 text-white shadow-md shadow-primary-500/25 font-medium' 
+                                                : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'
                                             }
                                             ${!isSidebarOpen ? 'justify-center px-0' : ''}
                                         `}
                                         title={!isSidebarOpen ? item.label : ''}
                                     >
-                                        <span className={`transition-colors duration-200 ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`}>
+                                        <span className={`transition-colors duration-200 ${isActive ? 'text-white' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`}>
                                             {item.icon}
                                         </span>
                                         
                                         {isSidebarOpen && (
                                             <span className="ml-3 text-sm truncate">{item.label}</span>
+                                        )}
+                                        
+                                        {/* Active Indicator Dot for collapsed view */}
+                                        {!isSidebarOpen && isActive && (
+                                            <div className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-white shadow-sm"></div>
                                         )}
                                     </button>
                                 );
@@ -140,19 +145,19 @@ export const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, onLogou
         {/* User / Logout */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800">
             {isSidebarOpen ? (
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl border border-slate-100 dark:border-slate-700/50">
                     <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-300 text-xs font-bold">
+                        <div className="h-9 w-9 rounded-full bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 flex items-center justify-center text-primary-600 dark:text-primary-400 text-sm font-bold shadow-sm">
                              {currentUser?.name.charAt(0)}
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-sm font-medium text-slate-700 dark:text-slate-200 leading-none">{currentUser?.name}</span>
+                            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 leading-none">{currentUser?.name}</span>
                             <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-1">{currentUser?.role}</span>
                         </div>
                     </div>
                     <button 
                         onClick={onLogout}
-                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors"
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-lg transition-colors"
                         title="Sign Out"
                     >
                         <LogOut size={16} />
@@ -161,10 +166,10 @@ export const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, onLogou
             ) : (
                  <button 
                     onClick={onLogout}
-                    className="w-full flex justify-center p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800 rounded transition-colors"
+                    className="w-full flex justify-center p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl transition-colors"
                     title="Sign Out"
                 >
-                    <LogOut size={18} />
+                    <LogOut size={20} />
                 </button>
             )}
         </div>
@@ -173,7 +178,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, onLogou
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
         {/* Header */}
-        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 z-10">
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 z-10 sticky top-0">
             <div className="flex items-center gap-4">
                 <button 
                     onClick={() => setSidebarOpen(!isSidebarOpen)} 
@@ -193,7 +198,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, onLogou
                     <input 
                         type="text" 
                         placeholder="Search..." 
-                        className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-md text-sm focus:ring-1 focus:ring-slate-300 dark:focus:ring-slate-600 focus:bg-white dark:focus:bg-slate-700 transition-all w-64 text-slate-700 dark:text-slate-200 placeholder-slate-400"
+                        className="pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-100 dark:focus:ring-primary-900/30 focus:bg-white dark:focus:bg-slate-700 transition-all w-64 text-slate-700 dark:text-slate-200 placeholder-slate-400"
                     />
                  </div>
 
@@ -202,11 +207,11 @@ export const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, onLogou
                         onClick={() => setShowNotifications(!showNotifications)}
                         className="relative p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 transition-colors"
                     >
-                        <Bell size={18} />
-                        <span className="absolute top-2.5 right-2.5 h-1.5 w-1.5 bg-slate-900 dark:bg-white rounded-full"></span>
+                        <Bell size={20} />
+                        <span className="absolute top-2 right-2 h-2 w-2 bg-rose-500 rounded-full ring-2 ring-white dark:ring-slate-900"></span>
                     </button>
                      {showNotifications && (
-                        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-lg shadow-xl border border-slate-100 dark:border-slate-800 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-900 rounded-xl shadow-xl shadow-slate-200/50 dark:shadow-black/50 border border-slate-100 dark:border-slate-800 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
                             <div className="px-4 py-2 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center">
                                 <h3 className="font-semibold text-sm text-slate-900 dark:text-white">Notifications</h3>
                                 <button className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-300">Clear</button>
@@ -214,7 +219,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, onLogou
                             <div className="max-h-64 overflow-y-auto custom-scrollbar">
                                 <div className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 border-b border-slate-50 dark:border-slate-800 cursor-pointer">
                                     <div className="flex gap-3">
-                                        <div className="mt-1 h-1.5 w-1.5 bg-slate-400 rounded-full shrink-0" />
+                                        <div className="mt-1 h-2 w-2 bg-amber-400 rounded-full shrink-0 shadow-sm" />
                                         <div>
                                             <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Low Stock Alert</p>
                                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Nike Air Max is below 5 units.</p>
@@ -230,7 +235,7 @@ export const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, onLogou
 
         {/* Viewport */}
         <main className="flex-1 overflow-auto p-6 scroll-smooth custom-scrollbar">
-            <div className="max-w-6xl mx-auto h-full">
+            <div className="max-w-7xl mx-auto h-full">
                 {children}
             </div>
         </main>
