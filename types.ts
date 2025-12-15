@@ -35,6 +35,7 @@ export interface AppSettings {
     email: string;
     themeMode: 'light' | 'dark';
     accentColor: 'indigo' | 'emerald' | 'rose' | 'amber' | 'blue' | 'violet';
+    logo?: string; // New: Base64 string for shop logo
 }
 
 export interface ProductVariant {

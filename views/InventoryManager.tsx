@@ -35,6 +35,7 @@ export const InventoryManager: React.FC = () => {
     const [newVariant, setNewVariant] = useState({ name: '', sku: '', price: '', stock: '' });
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const imageInputRef = useRef<HTMLInputElement>(null);
 
     // --- Computed Stats ---
     const stats = useMemo(() => {
@@ -91,6 +92,17 @@ export const InventoryManager: React.FC = () => {
     const handleDeleteProduct = (id: string) => {
         if(confirm('Are you sure you want to delete this product?')) {
             deleteItem(View.PRODUCTS, id);
+        }
+    };
+
+    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData(prev => ({ ...prev, image: reader.result as string }));
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -408,9 +420,14 @@ export const InventoryManager: React.FC = () => {
                 <div className="space-y-6">
                      <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2 flex justify-center">
-                             <div className="h-24 w-24 bg-slate-100 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:bg-slate-200">
-                                 {formData.image ? <img src={formData.image} className="w-full h-full object-cover rounded-lg" /> : <UploadCloud className="text-slate-400" />}
+                             <div 
+                                onClick={() => imageInputRef.current?.click()}
+                                className="h-32 w-32 bg-slate-100 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center cursor-pointer hover:bg-slate-200 relative overflow-hidden group"
+                             >
+                                 {formData.image ? <img src={formData.image} className="w-full h-full object-cover rounded-lg" /> : <UploadCloud className="text-slate-400 group-hover:scale-110 transition-transform" size={32} />}
+                                 {formData.image && <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Edit className="text-white" /></div>}
                              </div>
+                             <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
                         </div>
                         <Input label="Product Name" className="col-span-2" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} />
                         <Input label="SKU" value={formData.sku || ''} onChange={e => setFormData({...formData, sku: e.target.value})} />

@@ -41,6 +41,7 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
 
     // File Import
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const imageInputRef = useRef<HTMLInputElement>(null);
 
     const title = type.charAt(0) + type.slice(1).toLowerCase().replace('_', ' ');
 
@@ -222,6 +223,17 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
     const handlePrintLabel = (product: any) => {
         setLabelProduct(product);
         setIsLabelModalOpen(true);
+    };
+
+    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                updateField('image', reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     // --- FILTERING LOGIC ---
@@ -629,12 +641,21 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
                     {/* --- PRODUCTS --- */}
                     {type === View.PRODUCTS && (
                          <>
-                            <div className="col-span-2 flex justify-center py-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800 mb-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700">
-                                <div className="text-center">
-                                    <UploadCloud className="mx-auto h-8 w-8 text-slate-400" />
-                                    <span className="text-xs text-slate-500">Upload Image</span>
-                                </div>
+                            <div 
+                                onClick={() => imageInputRef.current?.click()}
+                                className="col-span-2 flex justify-center py-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800 mb-2 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 relative overflow-hidden"
+                            >
+                                {formData.image ? (
+                                    <img src={formData.image} alt="Product" className="h-32 w-full object-contain" />
+                                ) : (
+                                    <div className="text-center">
+                                        <UploadCloud className="mx-auto h-8 w-8 text-slate-400" />
+                                        <span className="text-xs text-slate-500">Upload Image</span>
+                                    </div>
+                                )}
                             </div>
+                            <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
+                            
                             <Input label="Product Name" className="col-span-2" value={formData.name || ''} onChange={e => updateField('name', e.target.value)} />
                             <div className="relative">
                                 <Input label="SKU / Barcode" value={formData.sku || ''} onChange={e => updateField('sku', e.target.value)} />

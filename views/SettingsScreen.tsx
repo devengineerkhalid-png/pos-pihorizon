@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button, Input, Card, Select } from '../components/UIComponents';
-import { Store, QrCode, Sliders, Printer, Save, Upload, Moon, Sun, Palette, Check } from 'lucide-react';
+import { Store, QrCode, Sliders, Printer, Save, Upload, Moon, Sun, Palette, Check, Edit } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
 export const SettingsScreen: React.FC = () => {
@@ -10,9 +10,21 @@ export const SettingsScreen: React.FC = () => {
 
     // Local state to handle form inputs before saving
     const [formData, setFormData] = useState(settings);
+    const logoInputRef = useRef<HTMLInputElement>(null);
 
     const handleChange = (key: string, value: any) => {
         setFormData(prev => ({...prev, [key]: value}));
+    };
+
+    const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                handleChange('logo', reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const handleSave = () => {
@@ -110,13 +122,35 @@ export const SettingsScreen: React.FC = () => {
                     <Card title="Business Information">
                         <div className="space-y-6">
                             <div className="flex items-center gap-6">
-                                <div className="h-24 w-24 bg-slate-100 dark:bg-slate-700 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors">
-                                    <Upload className="text-slate-400" />
+                                <div 
+                                    onClick={() => logoInputRef.current?.click()}
+                                    className="h-32 w-32 bg-slate-100 dark:bg-slate-700 rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors relative group overflow-hidden"
+                                >
+                                    {formData.logo ? (
+                                        <>
+                                            <img src={formData.logo} alt="Shop Logo" className="w-full h-full object-cover rounded-xl" />
+                                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Edit className="text-white" />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="text-center p-2">
+                                            <Upload className="text-slate-400 mx-auto mb-1" />
+                                            <span className="text-xs text-slate-500">Upload</span>
+                                        </div>
+                                    )}
                                 </div>
+                                <input 
+                                    type="file" 
+                                    ref={logoInputRef} 
+                                    className="hidden" 
+                                    accept="image/*" 
+                                    onChange={handleLogoUpload} 
+                                />
                                 <div>
                                     <h4 className="font-medium text-slate-900 dark:text-white">Shop Logo</h4>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400">Recommended 500x500px</p>
-                                    <Button size="sm" variant="secondary" className="mt-2">Upload New</Button>
+                                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Recommended 500x500px</p>
+                                    <Button size="sm" variant="secondary" onClick={() => logoInputRef.current?.click()}>Upload New</Button>
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">

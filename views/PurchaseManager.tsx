@@ -44,6 +44,15 @@ export const PurchaseManager: React.FC = () => {
     };
 
     const handleSavePurchase = () => {
+        if (!supplierId) {
+            alert("Please select a supplier from the list.");
+            return;
+        }
+        if (items.length === 0) {
+            alert("Please add at least one item.");
+            return;
+        }
+
         const supplierObj = suppliers.find(s => s.id === supplierId);
         
         const newPurchase: Purchase = {
@@ -51,7 +60,7 @@ export const PurchaseManager: React.FC = () => {
             type: createType,
             supplierId: supplierId,
             supplierName: supplierObj ? supplierObj.businessName : 'Unknown Supplier',
-            invoiceNumber: invoiceNo,
+            invoiceNumber: invoiceNo || `PO-${Date.now().toString().slice(-6)}`,
             date: date || new Date().toISOString().split('T')[0],
             items: items,
             total: items.reduce((sum, i) => sum + (i.quantity * i.cost), 0),
@@ -210,11 +219,14 @@ export const PurchaseManager: React.FC = () => {
                                 <div className="grid grid-cols-3 gap-4">
                                     <Select 
                                         label="Supplier" 
-                                        options={suppliers.map(s => ({value: s.id, label: s.businessName}))} 
+                                        options={[
+                                            { value: '', label: 'Select Supplier' },
+                                            ...suppliers.map(s => ({value: s.id, label: s.businessName}))
+                                        ]} 
                                         value={supplierId} 
                                         onChange={e => setSupplierId(e.target.value)} 
                                     />
-                                    <Input label={createType === 'ORDER' ? "PO Number" : "Invoice Number"} value={invoiceNo} onChange={e => setInvoiceNo(e.target.value)} />
+                                    <Input label={createType === 'ORDER' ? "PO Number" : "Invoice Number"} value={invoiceNo} onChange={e => setInvoiceNo(e.target.value)} placeholder="Auto-generate" />
                                     <Input label="Date" type="date" value={date} onChange={e => setDate(e.target.value)} />
                                 </div>
                             </div>
