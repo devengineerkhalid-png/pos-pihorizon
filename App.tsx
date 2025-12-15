@@ -7,6 +7,7 @@ import { Dashboard } from './views/Dashboard';
 import { PosScreen } from './views/PosScreen';
 import { GenericManager } from './views/GenericManager';
 import { PurchaseManager } from './views/PurchaseManager';
+import { InventoryManager } from './views/InventoryManager';
 import { Reports } from './views/Reports';
 import { SettingsScreen } from './views/SettingsScreen';
 import { LedgerScreen } from './views/LedgerScreen';
@@ -25,6 +26,7 @@ const AppContent = () => {
     switch (currentView) {
       case View.DASHBOARD: return <Dashboard />;
       case View.POS: return <PosScreen />;
+      case View.PRODUCTS: return <InventoryManager />;
       case View.REPORTS: return <Reports />;
       case View.SETTINGS: return <SettingsScreen />;
       case View.PURCHASES: return <PurchaseManager />;

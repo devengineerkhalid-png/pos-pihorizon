@@ -5,6 +5,7 @@ import { Search, Trash2, Plus, Minus, User, PauseCircle, CreditCard, ShoppingCar
 import { Product, CartItem, ProductVariant, HeldOrder, View, Invoice, ReturnItem } from '../types';
 import { useStore } from '../context/StoreContext';
 import { formatDistanceToNow } from 'date-fns';
+import { generateInvoicePDF } from '../utils/pdfGenerator';
 
 const CATEGORIES = ['All Items', 'Electronics', 'Apparel', 'Home', 'Beauty', 'Sports', 'Toys'];
 
@@ -270,6 +271,15 @@ export const PosScreen: React.FC = () => {
         setCartDiscount(0);
         setUseLoyaltyPoints(false);
         setSelectedCustomer('Walk-in Customer');
+    };
+
+    const handlePrintReceipt = () => {
+        const invoice = invoices.find(i => i.id === lastInvoiceId);
+        if (invoice) {
+            generateInvoicePDF(invoice, settings);
+        } else {
+            alert('Error: Invoice data not found.');
+        }
     };
 
     // Return Logic
@@ -976,7 +986,7 @@ export const PosScreen: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <Button variant="secondary" icon={<Printer size={18} />} onClick={() => alert('Printing Receipt...')}>Print Receipt</Button>
+                        <Button variant="secondary" icon={<Printer size={18} />} onClick={handlePrintReceipt}>Print Receipt</Button>
                         <Button onClick={resetSale} icon={<ArrowRight size={18} />}>New Sale</Button>
                     </div>
                 </div>

@@ -4,6 +4,7 @@ import { useStore } from '../context/StoreContext';
 import { Card, Table, Select, Button, Input, Badge } from '../components/UIComponents';
 import { Download, Filter, BookOpen } from 'lucide-react';
 import { LedgerEntry } from '../types';
+import { generateLedgerPDF } from '../utils/pdfGenerator';
 
 export const LedgerScreen: React.FC = () => {
     const { ledger, suppliers, settings, users } = useStore();
@@ -42,6 +43,10 @@ export const LedgerScreen: React.FC = () => {
         return entry;
     }).reverse();
 
+    const handleDownloadPDF = () => {
+        generateLedgerPDF(filteredLedger, settings, `General Ledger (${filterAccount === 'all' ? 'All' : filterAccount})`);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -55,7 +60,7 @@ export const LedgerScreen: React.FC = () => {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="secondary" icon={<Download size={16} />}>Export CSV</Button>
+                    <Button variant="secondary" onClick={handleDownloadPDF} icon={<Download size={16} />}>Download PDF</Button>
                 </div>
             </div>
 

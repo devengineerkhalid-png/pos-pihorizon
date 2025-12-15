@@ -1,12 +1,13 @@
 
 import React, { useState } from 'react';
 import { Button, Input, Table, Modal, Badge, Select, Card } from '../components/UIComponents';
-import { Plus, Search, Filter, Trash2, Calendar, User, Save, ArrowLeft, Package, Clock, CheckCircle, Truck, History, RotateCcw, Reply } from 'lucide-react';
+import { Plus, Search, Filter, Trash2, Calendar, User, Save, ArrowLeft, Package, Clock, CheckCircle, Truck, History, RotateCcw, Reply, AlertTriangle, Download } from 'lucide-react';
 import { Purchase, PurchaseItem, PurchaseHistoryEntry, View } from '../types';
 import { useStore } from '../context/StoreContext';
+import { generatePurchaseOrderPDF } from '../utils/pdfGenerator';
 
 export const PurchaseManager: React.FC = () => {
-    const { purchases, addItem, updateItem, suppliers, returnPurchase } = useStore();
+    const { purchases, addItem, updateItem, suppliers, returnPurchase, receivePurchaseItems, settings } = useStore();
     const [viewMode, setViewMode] = useState<'LIST' | 'CREATE' | 'DETAIL'>('LIST');
     const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
     const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
@@ -82,9 +83,8 @@ export const PurchaseManager: React.FC = () => {
 
     const openReceiveModal = () => {
         if(!selectedPurchase) return;
-        // Initialize receiving state with 0 for all incomplete items
+        // Initialize receiving state with 0 for all items
         const initReceiving = selectedPurchase.items
-            .filter(i => i.receivedQuantity < i.quantity)
             .map(i => ({
                 id: i.productId,
                 qty: 0,
@@ -101,47 +101,21 @@ export const PurchaseManager: React.FC = () => {
         const validReceiving = receivingItems.filter(r => r.qty > 0);
         if(validReceiving.length === 0) return;
 
-        // Create History Entry
-        const historyEntry: PurchaseHistoryEntry = {
-            id: Date.now().toString(),
-            date: new Date().toISOString(),
-            items: validReceiving.map(r => {
-                const originalItem = selectedPurchase.items.find(i => i.productId === r.id);
-                return {
-                    productId: r.id,
-                    productName: originalItem?.productName || 'Unknown',
-                    quantity: r.qty,
-                    batchNo: r.batch,
-                    expiryDate: r.expiry
-                };
-            })
-        };
-
-        // Update Purchase Item Counts
-        const updatedItems = selectedPurchase.items.map(item => {
-            const received = validReceiving.find(r => r.id === item.productId);
-            if(received) {
-                return { ...item, receivedQuantity: item.receivedQuantity + received.qty };
-            }
-            return item;
+        const receivingPayload = validReceiving.map(r => {
+            const originalItem = selectedPurchase.items.find(i => i.productId === r.id);
+            return {
+                productId: r.id,
+                quantity: r.qty,
+                batchNo: r.batch,
+                expiryDate: r.expiry
+            };
         });
 
-        // Determine New Status
-        const totalOrdered = updatedItems.reduce((s, i) => s + i.quantity, 0);
-        const totalReceived = updatedItems.reduce((s, i) => s + i.receivedQuantity, 0);
-        const newStatus = totalReceived >= totalOrdered ? 'Completed' : 'Partial';
-
-        const updatedPurchase = {
-            ...selectedPurchase,
-            items: updatedItems,
-            status: newStatus as any,
-            receivedHistory: [historyEntry, ...selectedPurchase.receivedHistory]
-        };
-
-        // Update Store
-        updateItem(View.PURCHASES, updatedPurchase);
-        setSelectedPurchase(updatedPurchase); // Update local view
+        receivePurchaseItems(selectedPurchase.id, receivingPayload);
         setIsReceiveModalOpen(false);
+        // Note: Store update will propagate, but to see changes instantly without refetch or relying on prop drilling,
+        // we can close the modal and return to list, or optimistically update. Returning to list is safest.
+        setViewMode('LIST'); 
     };
 
     const openReturnModal = () => {
@@ -176,30 +150,14 @@ export const PurchaseManager: React.FC = () => {
         });
 
         returnPurchase(selectedPurchase.id, returnPayload);
-        
-        // Refresh local selected view by finding it again from updated store
-        // However, returnPurchase updates store which triggers re-render, 
-        // but local 'selectedPurchase' state might be stale.
-        // We'll optimistically update it or refetch. 
-        // For simplicity, close modal and update local state manually based on payload.
-        
-        // Note: returnPurchase updates returnHistory in store. To see it immediately,
-        // we should rely on store data or manual update.
-        // Let's manually update 'selectedPurchase' returnHistory for the UI immediately
-        const totalRefund = returnPayload.reduce((acc, item) => acc + item.refundAmount, 0);
-        const newHistoryEntry = {
-             id: `RET-${Date.now()}`,
-             date: new Date().toISOString(),
-             items: returnPayload,
-             totalRefund: totalRefund
-        };
-        
-        setSelectedPurchase(prev => prev ? ({
-            ...prev,
-            returnHistory: [newHistoryEntry, ...(prev.returnHistory || [])]
-        }) : null);
-
         setIsReturnModalOpen(false);
+        setViewMode('LIST');
+    };
+
+    const handleDownloadPDF = () => {
+        if(selectedPurchase) {
+            generatePurchaseOrderPDF(selectedPurchase, settings);
+        }
     };
 
 
@@ -208,17 +166,20 @@ export const PurchaseManager: React.FC = () => {
     const renderProgressBar = (current: number, total: number) => {
         const percent = Math.min(100, Math.round((current / total) * 100));
         let color = 'bg-primary-600';
-        if(percent >= 100) color = 'bg-emerald-500';
-        else if (percent > 0) color = 'bg-amber-500';
+        if(current > total) color = 'bg-amber-500'; // Over-received
+        else if(percent >= 100) color = 'bg-emerald-500';
 
         return (
             <div className="w-full">
                 <div className="flex justify-between text-xs mb-1">
-                    <span className="font-medium text-slate-700">{current} / {total}</span>
-                    <span className="text-slate-500">{percent}%</span>
+                    <span className="font-medium text-slate-700">
+                        {current} / {total}
+                        {current > total && <span className="text-amber-600 ml-1">(+{current - total} Excess)</span>}
+                    </span>
+                    <span className="text-slate-500">{Math.round((current/total)*100)}%</span>
                 </div>
                 <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
-                    <div className={`${color} h-2 rounded-full transition-all duration-500`} style={{ width: `${percent}%` }}></div>
+                    <div className={`${color} h-2 rounded-full transition-all duration-500`} style={{ width: `${Math.min(100, (current/total)*100)}%` }}></div>
                 </div>
             </div>
         );
@@ -354,9 +315,13 @@ export const PurchaseManager: React.FC = () => {
                         </div>
                     </div>
                     <div className="flex gap-2">
+                         <Button onClick={handleDownloadPDF} variant="secondary" icon={<Download size={18} />}>Download PDF</Button>
                          <Button onClick={openReturnModal} variant="secondary" icon={<Reply size={18} />} className="text-rose-600 border-rose-200 hover:bg-rose-50">Return Items</Button>
                          {selectedPurchase.type === 'ORDER' && selectedPurchase.status !== 'Completed' && (
                             <Button onClick={openReceiveModal} icon={<Truck size={18} />}>Receive Stock</Button>
+                        )}
+                        {selectedPurchase.type === 'ORDER' && selectedPurchase.status === 'Completed' && (
+                            <Button onClick={openReceiveModal} icon={<Plus size={18} />} variant="secondary">Receive Extra</Button>
                         )}
                     </div>
                 </div>
@@ -399,7 +364,7 @@ export const PurchaseManager: React.FC = () => {
                                 <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
                                     {selectedPurchase.receivedHistory.map((history, idx) => (
                                         <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                                            <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-slate-100 group-[.is-active]:bg-emerald-500 text-slate-500 group-[.is-active]:text-emerald-50 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
+                                            <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-slate-100 group-[.is-active]:bg-primary-500 text-slate-500 group-[.is-active]:text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
                                                 <CheckCircle size={18} />
                                             </div>
                                             <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -475,21 +440,27 @@ export const PurchaseManager: React.FC = () => {
                 </div>
 
                 {/* Receive Modal */}
-                <Modal isOpen={isReceiveModalOpen} onClose={() => setIsReceiveModalOpen(false)} title="Receive Partial Shipment">
+                <Modal isOpen={isReceiveModalOpen} onClose={() => setIsReceiveModalOpen(false)} title="Receive Shipment">
                     <div className="space-y-4">
-                        <p className="text-sm text-slate-500">Enter quantity, batch, and expiry for arriving items.</p>
+                        <p className="text-sm text-slate-500">Enter quantity, batch, and expiry for arriving items. You can partial receive or over-receive.</p>
                         <div className="max-h-[50vh] overflow-y-auto pr-2 space-y-4">
                             {selectedPurchase.items.map((item) => {
                                 const remaining = item.quantity - item.receivedQuantity;
-                                if(remaining <= 0) return null;
-                                
                                 const currentEntry = receivingItems.find(r => r.id === item.productId) || {qty: 0, batch: '', expiry: ''};
+                                const isExcess = currentEntry.qty > remaining;
 
                                 return (
-                                    <div key={item.productId} className="p-3 border border-slate-200 rounded-lg bg-slate-50">
+                                    <div key={item.productId} className={`p-3 border rounded-lg ${isExcess ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'}`}>
                                         <div className="flex justify-between mb-2">
                                             <span className="font-medium text-sm text-slate-900">{item.productName}</span>
-                                            <span className="text-xs text-slate-500">Remaining: {remaining}</span>
+                                            <div className="text-right">
+                                                <div className="text-xs text-slate-500">
+                                                    Ordered: {item.quantity} | Received: {item.receivedQuantity}
+                                                </div>
+                                                <div className={`text-xs font-bold ${isExcess ? 'text-amber-600' : 'text-primary-600'}`}>
+                                                    Remaining: {Math.max(0, remaining)} {isExcess && "(Excess!)"}
+                                                </div>
+                                            </div>
                                         </div>
                                         <div className="grid grid-cols-3 gap-2">
                                             <Input 
@@ -497,9 +468,10 @@ export const PurchaseManager: React.FC = () => {
                                                 placeholder="Qty" 
                                                 value={currentEntry.qty || ''}
                                                 onChange={(e) => {
-                                                    const val = Math.min(remaining, Number(e.target.value));
+                                                    const val = Number(e.target.value);
                                                     setReceivingItems(receivingItems.map(r => r.id === item.productId ? {...r, qty: val} : r));
                                                 }}
+                                                className={isExcess ? 'border-amber-300 focus:border-amber-500 focus:ring-amber-200' : ''}
                                             />
                                             <Input 
                                                 placeholder="Batch" 
@@ -606,7 +578,7 @@ export const PurchaseManager: React.FC = () => {
                                  <div className="w-24">
                                      <div className="text-[10px] text-right mb-0.5">{pct}%</div>
                                      <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                         <div className="h-full bg-primary-500" style={{width: `${pct}%`}}></div>
+                                         <div className="h-full bg-primary-500" style={{width: `${Math.min(100, pct)}%`}}></div>
                                      </div>
                                  </div>
                              );

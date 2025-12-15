@@ -53,6 +53,7 @@ export interface Product {
   price: number;
   costPrice?: number;
   stock: number;
+  minStockLevel?: number; // New: Reorder point
   sku: string;
   image?: string;
   supplier?: string;

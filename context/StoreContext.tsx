@@ -10,6 +10,7 @@ const INITIAL_PRODUCTS: Product[] = Array.from({ length: 15 }).map((_, i) => ({
     price: 49.99 + i * 10,
     costPrice: 20 + i * 5,
     stock: 20 + i,
+    minStockLevel: 10,
     sku: `SKU-${1000 + i}`,
     image: `https://picsum.photos/200/200?random=${i}`,
     supplier: 'Acme Corp',
@@ -67,7 +68,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     phone: '+1 234 567 890',
     email: 'contact@store.com',
     themeMode: 'light',
-    accentColor: 'blue' // Updated default to Blue
+    accentColor: 'blue' 
 };
 
 // Refined "Modern" Color Palettes
@@ -105,11 +106,11 @@ interface StoreContextType {
     updateItem: (type: View, item: any) => void;
     deleteItem: (type: View, id: string) => void;
     updateSettings: (newSettings: Partial<AppSettings>) => void;
-    returnInvoice: (invoiceId: string) => void; // Deprecated in favor of processSalesReturn but kept for compatibility
+    returnInvoice: (invoiceId: string) => void; 
     processSalesReturn: (invoiceId: string, items: ReturnItem[]) => void;
     returnPurchase: (purchaseId: string, items: ReturnItem[]) => void;
+    receivePurchaseItems: (purchaseId: string, items: {productId: string, quantity: number, batchNo?: string, expiryDate?: string}[]) => void;
     
-    // New Methods
     addStockAdjustment: (adjustment: Omit<StockAdjustment, 'id' | 'date' | 'costAmount'>) => void;
     openRegister: (amount: number) => void;
     closeRegister: (actualAmount: number) => void;
@@ -134,12 +135,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const [ledger, setLedger] = useState<LedgerEntry[]>(INITIAL_LEDGER);
     const [roles, setRoles] = useState<Role[]>([
         { id: 'r-1', name: 'Admin', permissions: ['ALL'] },
-        // Updated Cashier permissions to include DASHBOARD
         { id: 'r-2', name: 'Cashier', permissions: ['POS', 'CUSTOMERS', 'DASHBOARD'] }
     ]);
     const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
     
-    // New States
     const [registerSession, setRegisterSession] = useState<RegisterSession | null>(null);
     const [stockAdjustments, setStockAdjustments] = useState<StockAdjustment[]>([]);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -202,13 +201,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const registerUser = (email: string, pin: string) => {
         setUsers(prev => {
-            // Check if user exists
             const exists = prev.find(u => u.email === email);
             if (exists) {
-                // Update PIN
                 return prev.map(u => u.email === email ? { ...u, pin } : u);
             } else {
-                // Create new user (Role defaults to Cashier for self-reg)
                 const newUser: User = {
                     id: `u-${Date.now()}`,
                     name: email.split('@')[0],
@@ -224,7 +220,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const login = (email: string, pin: string) => {
         const user = users.find(u => u.email === email);
-        // Allow login if PIN matches OR if it's the master fallback '1234' (useful for demos)
         if (user && (user.pin === pin || pin === '1234')) {
             setCurrentUser(user);
             return true;
@@ -245,7 +240,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }, ...prev]);
     };
 
-    // --- REGISTER LOGIC ---
     const openRegister = (amount: number) => {
         setRegisterSession({
             id: `REG-${Date.now()}`,
@@ -278,7 +272,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         });
     };
 
-    // --- STOCK ADJUSTMENT LOGIC ---
     const addStockAdjustment = (adjustment: Omit<StockAdjustment, 'id' | 'date' | 'costAmount'>) => {
         const product = products.find(p => p.id === adjustment.productId);
         if(!product) return;
@@ -294,16 +287,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
         setStockAdjustments(prev => [newAdj, ...prev]);
 
-        // Update Product Stock
         const updatedProducts = products.map(p => {
             if(p.id === adjustment.productId) {
-                return { ...p, stock: p.stock + adjustment.quantity }; // quantity is negative for loss
+                return { ...p, stock: p.stock + adjustment.quantity }; 
             }
             return p;
         });
         setProducts(updatedProducts);
 
-        // Ledger: If quantity is negative (loss), Debit Expense, Credit Inventory
         if(adjustment.quantity < 0) {
             addLedgerEntry({
                 date: new Date().toISOString().split('T')[0],
@@ -317,13 +308,102 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
     };
 
+    // --- PURCHASE RECEIVING LOGIC ---
+    const receivePurchaseItems = (purchaseId: string, items: {productId: string, quantity: number, batchNo?: string, expiryDate?: string}[]) => {
+        const purchase = purchases.find(p => p.id === purchaseId);
+        if(!purchase) return;
+
+        const date = new Date().toISOString();
+        let totalCostReceived = 0;
+
+        // 1. Create History Entry
+        const historyEntry = {
+            id: `RECV-${Date.now()}`,
+            date: date,
+            items: items.map(item => {
+                const pItem = purchase.items.find(pi => pi.productId === item.productId);
+                return {
+                    productId: item.productId,
+                    productName: pItem?.productName || 'Unknown',
+                    quantity: item.quantity,
+                    batchNo: item.batchNo,
+                    expiryDate: item.expiryDate
+                };
+            })
+        };
+
+        // 2. Update Purchase Items & Calc Cost
+        const updatedPurchaseItems = purchase.items.map(pItem => {
+            const received = items.find(i => i.productId === pItem.productId);
+            if(received) {
+                totalCostReceived += received.quantity * pItem.cost;
+                return { ...pItem, receivedQuantity: pItem.receivedQuantity + received.quantity };
+            }
+            return pItem;
+        });
+
+        // 3. Update Purchase Status
+        const totalOrdered = updatedPurchaseItems.reduce((acc, i) => acc + i.quantity, 0);
+        const totalReceived = updatedPurchaseItems.reduce((acc, i) => acc + i.receivedQuantity, 0);
+        const newStatus = totalReceived >= totalOrdered ? 'Completed' : 'Partial';
+
+        const updatedPurchase = {
+            ...purchase,
+            items: updatedPurchaseItems,
+            status: newStatus as any,
+            receivedHistory: [historyEntry, ...(purchase.receivedHistory || [])]
+        };
+
+        setPurchases(prev => prev.map(p => p.id === purchaseId ? updatedPurchase : p));
+
+        // 4. Update Product Stock (Increment by received quantity)
+        const updatedProducts = [...products];
+        items.forEach(item => {
+            const prodIndex = updatedProducts.findIndex(p => p.id === item.productId);
+            if(prodIndex > -1) {
+                updatedProducts[prodIndex].stock += item.quantity;
+                // Optionally update cost price if dynamic averaging is needed (skipped for simplicity)
+            }
+        });
+        setProducts(updatedProducts);
+
+        // 5. Update Supplier Balance (Increase Liability)
+        setSuppliers(prev => prev.map(s => {
+            if(s.id === purchase.supplierId) {
+                return { ...s, balance: s.balance + totalCostReceived };
+            }
+            return s;
+        }));
+
+        // 6. Ledger Entries
+        addLedgerEntry({
+            date: date.split('T')[0],
+            description: `Stock Received PO#${purchase.invoiceNumber}`,
+            referenceId: purchaseId,
+            type: 'DEBIT',
+            amount: totalCostReceived,
+            accountId: 'INVENTORY',
+            accountName: 'Inventory Asset',
+            category: 'PURCHASE'
+        });
+        addLedgerEntry({
+            date: date.split('T')[0],
+            description: `Bill for PO#${purchase.invoiceNumber}`,
+            referenceId: purchaseId,
+            type: 'CREDIT',
+            amount: totalCostReceived,
+            accountId: purchase.supplierId,
+            accountName: purchase.supplierName,
+            category: 'PURCHASE'
+        });
+    };
+
     const returnPurchase = (purchaseId: string, items: ReturnItem[]) => {
         const purchase = purchases.find(p => p.id === purchaseId);
         if (!purchase) return;
 
         const totalRefund = items.reduce((acc, item) => acc + item.refundAmount, 0);
 
-        // 1. Update Purchase Return History
         const newHistory: ReturnHistoryEntry = {
             id: `RET-${Date.now()}`,
             date: new Date().toISOString(),
@@ -338,18 +418,15 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
         setPurchases(prev => prev.map(p => p.id === purchaseId ? updatedPurchase : p));
 
-        // 2. Reduce Stock
         let updatedProducts = [...products];
         items.forEach(item => {
             const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
             if(productIndex > -1) {
-                // Ensure we don't go below zero, though validation should happen in UI
                 updatedProducts[productIndex].stock = Math.max(0, updatedProducts[productIndex].stock - item.quantity);
             }
         });
         setProducts(updatedProducts);
 
-        // 3. Update Supplier Balance (Reduce what we owe)
         setSuppliers(prev => prev.map(s => {
             if (s.id === purchase.supplierId) {
                 return { ...s, balance: s.balance - totalRefund };
@@ -357,8 +434,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             return s;
         }));
 
-        // 4. Ledger Entries
-        // Debit Supplier (Decrease Liability) or Cash (if cash return)
         addLedgerEntry({
             date: new Date().toISOString().split('T')[0],
             description: `Purchase Return for #${purchase.invoiceNumber}`,
@@ -370,7 +445,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             category: 'PURCHASE'
         });
 
-        // Credit Inventory (Decrease Asset)
         addLedgerEntry({
             date: new Date().toISOString().split('T')[0],
             description: `Stock Return Value #${purchase.invoiceNumber}`,
@@ -389,7 +463,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
         const totalRefund = items.reduce((acc, item) => acc + item.refundAmount, 0);
 
-        // 1. Record Return in History
         const returnEntry: ReturnHistoryEntry = {
             id: `RET-SALE-${Date.now()}`,
             date: new Date().toISOString(),
@@ -397,14 +470,12 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             totalRefund: totalRefund
         };
 
-        // 2. Update Invoice: Add to history, update status, increment returnedQuantity on items
         const updatedInvoice: Invoice = {
             ...invoice,
             returns: [returnEntry, ...(invoice.returns || [])],
-            // Check if all items fully returned? Simplification: If any return, status = Partial Refund or Returned
             status: 'Partial Refund', 
             items: invoice.items?.map(invItem => {
-                const returned = items.find(r => r.productId === invItem.id); // Note: assuming productId matches cartItem.id
+                const returned = items.find(r => r.productId === invItem.id); 
                 if (returned) {
                     return { ...invItem, returnedQuantity: (invItem.returnedQuantity || 0) + returned.quantity };
                 }
@@ -412,7 +483,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             })
         };
 
-        // If total refunded >= total paid, mark as Returned
         const totalRefundedSoFar = (updatedInvoice.returns || []).reduce((acc, r) => acc + r.totalRefund, 0);
         if (totalRefundedSoFar >= updatedInvoice.total) {
             updatedInvoice.status = 'Returned';
@@ -420,7 +490,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
         setInvoices(prev => prev.map(i => i.id === invoiceId ? updatedInvoice : i));
 
-        // 3. Restore Stock (Only for non-custom/borrowed items generally, but simplifed here)
         let updatedProducts = [...products];
         items.forEach(item => {
             const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
@@ -430,7 +499,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         });
         setProducts(updatedProducts);
 
-        // 4. Ledger: Debit Sales Returns, Credit Cash
         addLedgerEntry({
             date: new Date().toISOString().split('T')[0],
             description: `Sales Refund for #${invoiceId}`,
@@ -452,21 +520,15 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
             category: 'SALES'
         });
 
-        // 5. Adjust Loyalty (Remove points earned on returned items)
         const customer = customers.find(c => c.name === invoice.customerName);
         if(customer) {
-            // Approx: 1 point per $1.
             const pointsToRemove = Math.floor(totalRefund);
             setCustomers(prev => prev.map(c => 
                 c.id === customer.id ? { ...c, loyaltyPoints: Math.max(0, c.loyaltyPoints - pointsToRemove) } : c
             ));
         }
 
-        // 6. Update Register if Open (Cash Refund reduces cash)
         if (registerSession && registerSession.status === 'OPEN' && invoice.paymentMethod === 'Cash') {
-             // Technically a refund should reduce expected balance
-             // or track as a separate 'Refunds' line.
-             // We'll reduce totalSales to keep it simple, or add a 'returns' field to session
              setRegisterSession({
                  ...registerSession,
                  expectedBalance: registerSession.expectedBalance - totalRefund
@@ -480,7 +542,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
         if (type === View.INVOICES) {
             const inv = item as Invoice;
-            // Update Register if cash
             if (registerSession && registerSession.status === 'OPEN' && inv.paymentMethod === 'Cash') {
                 setRegisterSession({
                     ...registerSession,
@@ -490,18 +551,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 });
             }
 
-            // --- LOYALTY LOGIC ---
             const customer = customers.find(c => c.name === inv.customerName);
             if (customer) {
                 let newPoints = customer.loyaltyPoints || 0;
-                
                 if (inv.loyaltyPointsUsed) {
                     newPoints -= inv.loyaltyPointsUsed;
                 }
-
                 const earned = Math.floor(inv.total);
                 newPoints += earned;
-
                 inv.loyaltyPointsEarned = earned;
 
                 const updatedCustomers = customers.map(c => 
@@ -512,7 +569,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 setCustomers(updatedCustomers);
             }
 
-            // Ledger Logic
             addLedgerEntry({
                 date: today,
                 description: `Sale Invoice #${inv.id}`,
@@ -534,12 +590,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 category: 'SALES'
             });
 
-             // Handle Stock Reduction
              if (inv.items) {
                 const updatedProducts = [...products];
                 inv.items.forEach(cartItem => {
                     if (cartItem.isCustom || cartItem.isBorrowed) return; 
-
                     const productIndex = updatedProducts.findIndex(p => p.id === cartItem.id);
                     if (productIndex > -1) {
                         if (cartItem.variantId) {
@@ -553,10 +607,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 setProducts(updatedProducts);
             }
 
-            // Handle Borrowed Items
             if (inv.items) {
                 const borrowedItems = inv.items.filter(i => i.isBorrowed && i.borrowedSupplierId);
-                
                 if (borrowedItems.length > 0) {
                     const itemsBySupplier: Record<string, CartItem[]> = {};
                     borrowedItems.forEach(bi => {
@@ -607,9 +659,39 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         } 
         else if (type === View.PURCHASES) {
              const pur = item as Purchase;
-             // Ensure returnHistory exists
              pur.returnHistory = [];
+             pur.receivedHistory = pur.receivedHistory || []; // Ensure initialized
+
+             // If DIRECT INVOICE, receive stock immediately
+             if (pur.type === 'INVOICE') {
+                 // 1. Add Stock
+                 const updatedProducts = [...products];
+                 pur.items.forEach(pi => {
+                     const idx = updatedProducts.findIndex(p => p.id === pi.productId);
+                     if(idx > -1) updatedProducts[idx].stock += pi.quantity;
+                 });
+                 setProducts(updatedProducts);
+
+                 // 2. Update Supplier Balance
+                 setSuppliers(prev => prev.map(s => {
+                     if(s.id === pur.supplierId) return { ...s, balance: s.balance + pur.total };
+                     return s;
+                 }));
+
+                 // 3. Ledger: Debit Inventory, Credit Supplier
+                 addLedgerEntry({
+                    date: today,
+                    description: `Stock Received (Invoice) ${pur.invoiceNumber}`,
+                    referenceId: pur.id,
+                    type: 'DEBIT',
+                    amount: pur.total,
+                    accountId: 'INVENTORY',
+                    accountName: 'Inventory Asset',
+                    category: 'PURCHASE'
+                 });
+             }
              
+             // Base Ledger entry for the bill itself (Accounts Payable)
              addLedgerEntry({
                 date: today,
                 description: `Purchase Invoice ${pur.invoiceNumber}`,
@@ -688,9 +770,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
 
     const returnInvoice = (invoiceId: string) => {
-        // Deprecated simple toggle, but maintained for compatibility if called elsewhere.
-        // It now redirects to a full return logic if possible, or just does a basic reversal.
-        // For now, we will just use the new logic assuming full return.
         const inv = invoices.find(i => i.id === invoiceId);
         if(inv && inv.items) {
             const itemsToReturn = inv.items.map(i => ({
@@ -708,12 +787,12 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setSettings(prev => ({...prev, ...newSettings}));
     };
 
-    if (!isLoaded) return null; // Or a loading spinner
+    if (!isLoaded) return null; 
 
     return (
         <StoreContext.Provider value={{
             products, suppliers, customers, users, expenses, invoices, roles, purchases, settings, ledger, registerSession, stockAdjustments, currentUser,
-            addItem, updateItem, deleteItem, updateSettings, returnInvoice, addStockAdjustment, openRegister, closeRegister, login, logout, registerUser, returnPurchase, processSalesReturn
+            addItem, updateItem, deleteItem, updateSettings, returnInvoice, addStockAdjustment, openRegister, closeRegister, login, logout, registerUser, returnPurchase, receivePurchaseItems, processSalesReturn
         }}>
             {children}
         </StoreContext.Provider>

@@ -64,7 +64,7 @@ export const Dashboard: React.FC = () => {
   const [showRegModal, setShowRegModal] = useState(false);
   const [regAmount, setRegAmount] = useState('');
 
-  // Get active chart color
+  // Get active chart color based on settings
   const chartHex = CHART_COLORS[settings.accentColor] || CHART_COLORS['blue'];
 
   // --- Real-time Stats Calculation ---
@@ -250,7 +250,7 @@ export const Dashboard: React.FC = () => {
             </Card>
 
             {/* Quick Actions Card - Themed Gradient */}
-            <div className="rounded-xl p-6 text-white shadow-xl bg-gradient-to-br from-primary-800 to-primary-950 border border-primary-700 relative overflow-hidden">
+            <div className={`rounded-xl p-6 text-white shadow-xl bg-gradient-to-br from-primary-800 to-primary-950 border border-primary-700 relative overflow-hidden`}>
                 <div className="absolute top-0 right-0 p-4 opacity-10 transform translate-x-1/4 -translate-y-1/4">
                     <Package size={120} />
                 </div>

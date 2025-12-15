@@ -2,8 +2,9 @@
 import React, { useState, useRef } from 'react';
 import { Button, Input, Table, Modal, Badge, Select } from '../components/UIComponents';
 import { Plus, Search, Filter, Edit, Trash2, Layers, UploadCloud, Barcode, RotateCcw, AlertOctagon, Download, Upload, Printer, QrCode, X, Eye, Phone, Mail, MapPin, FileText } from 'lucide-react';
-import { View, ProductVariant, Purchase } from '../types';
+import { View, ProductVariant, Purchase, Invoice, Expense } from '../types';
 import { useStore } from '../context/StoreContext';
+import { generateInvoicePDF, generateExpenseReportPDF } from '../utils/pdfGenerator';
 
 interface ManagerProps {
     type: View;
@@ -120,6 +121,18 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
     const handleRefund = (id: string) => {
         if(confirm('Process full refund for this invoice? Stock will be restored.')) {
             returnInvoice(id);
+        }
+    };
+
+    const handlePrintInvoice = (invoice: Invoice) => {
+        generateInvoicePDF(invoice, settings);
+    };
+
+    const handleDownloadReport = () => {
+        if (type === View.EXPENSES) {
+            generateExpenseReportPDF(data as Expense[], settings);
+        } else {
+            handleExportCSV();
         }
     };
 
@@ -377,8 +390,14 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
                                 className="hidden" 
                                 onChange={handleImportCSV} 
                             />
-                            <Button variant="secondary" icon={<Upload size={16} />} title="Import CSV" onClick={() => fileInputRef.current?.click()}>Import</Button>
-                            <Button variant="secondary" icon={<Download size={16} />} title="Export CSV" onClick={handleExportCSV}>Export</Button>
+                            {type === View.EXPENSES ? (
+                                <Button variant="secondary" icon={<Download size={16} />} title="Download Expense Report" onClick={handleDownloadReport}>Download Report</Button>
+                            ) : (
+                                <>
+                                    <Button variant="secondary" icon={<Upload size={16} />} title="Import CSV" onClick={() => fileInputRef.current?.click()}>Import</Button>
+                                    <Button variant="secondary" icon={<Download size={16} />} title="Export CSV" onClick={handleExportCSV}>Export</Button>
+                                </>
+                            )}
                         </div>
                     </div>
 
@@ -408,6 +427,9 @@ export const GenericManager: React.FC<ManagerProps> = ({ type }) => {
                              )}
                              {type === View.PRODUCTS && (
                                  <button onClick={() => handlePrintLabel(item)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 transition-colors" title="Print Label"><Printer size={16} /></button>
+                             )}
+                             {type === View.INVOICES && (
+                                <button onClick={() => handlePrintInvoice(item)} className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-600 transition-colors" title="Print Invoice"><Printer size={16} /></button>
                              )}
                              {type === View.INVOICES && item.status !== 'Returned' && (
                                 <button onClick={() => handleRefund(item.id)} className="p-1.5 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded text-amber-600 transition-colors" title="Refund Invoice"><RotateCcw size={16} /></button>
