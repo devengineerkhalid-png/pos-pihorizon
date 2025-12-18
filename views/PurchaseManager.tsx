@@ -9,7 +9,11 @@ import { generatePurchaseOrderPDF } from '../utils/pdfGenerator';
 export const PurchaseManager: React.FC = () => {
     const { purchases, addItem, updateItem, suppliers, returnPurchase, receivePurchaseItems, settings } = useStore();
     const [viewMode, setViewMode] = useState<'LIST' | 'CREATE' | 'DETAIL'>('LIST');
-    const [selectedPurchase, setSelectedPurchase] = useState<Purchase | null>(null);
+    
+    // Changed from holding object to holding ID for reactivity
+    const [selectedPurchaseId, setSelectedPurchaseId] = useState<string | null>(null);
+    const selectedPurchase = purchases.find(p => p.id === selectedPurchaseId) || null;
+
     const [isReceiveModalOpen, setIsReceiveModalOpen] = useState(false);
     const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
     
@@ -122,9 +126,7 @@ export const PurchaseManager: React.FC = () => {
 
         receivePurchaseItems(selectedPurchase.id, receivingPayload);
         setIsReceiveModalOpen(false);
-        // Note: Store update will propagate, but to see changes instantly without refetch or relying on prop drilling,
-        // we can close the modal and return to list, or optimistically update. Returning to list is safest.
-        setViewMode('LIST'); 
+        // Stay on detail view to show updates
     };
 
     const openReturnModal = () => {
@@ -160,7 +162,7 @@ export const PurchaseManager: React.FC = () => {
 
         returnPurchase(selectedPurchase.id, returnPayload);
         setIsReturnModalOpen(false);
-        setViewMode('LIST');
+        // Stay on detail view
     };
 
     const handleDownloadPDF = () => {
@@ -314,7 +316,7 @@ export const PurchaseManager: React.FC = () => {
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" onClick={() => { setViewMode('LIST'); setSelectedPurchase(null); }} icon={<ArrowLeft size={20} />}>Back</Button>
+                        <Button variant="ghost" onClick={() => { setViewMode('LIST'); setSelectedPurchaseId(null); }} icon={<ArrowLeft size={20} />}>Back</Button>
                         <div>
                             <h1 className="text-2xl font-bold text-slate-900">{selectedPurchase.invoiceNumber}</h1>
                             <div className="flex gap-2 items-center text-sm text-slate-500">
@@ -603,7 +605,7 @@ export const PurchaseManager: React.FC = () => {
                         }}
                     ]}
                     data={purchases}
-                    actions={(item) => <Button variant="ghost" size="sm" onClick={() => { setSelectedPurchase(item); setViewMode('DETAIL'); }}>Manage</Button>}
+                    actions={(item) => <Button variant="ghost" size="sm" onClick={() => { setSelectedPurchaseId(item.id); setViewMode('DETAIL'); }}>Manage</Button>}
                 />
             </div>
         </div>

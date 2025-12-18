@@ -1,0 +1,30 @@
+
+Module,Sub Module,Requirement ID,Requirement Description,Requirement Type,Frontend Status,Backend Status,Database Status,QA Status,Overall Status,Priority,Sprint,Owner,Remarks,Last Updated
+Authentication,Login,AUTH-001,User login with Email and User Existence Check,Functional,Completed,Pending,Pending,Pending,In Progress,High,1,Frontend Lead,Implemented in AuthScreen.tsx,2023-10-27
+Authentication,OTP,AUTH-002,OTP Verification Flow simulation,Functional,Completed,Pending,Pending,Pending,In Progress,High,1,Frontend Lead,Mocked simulation,2023-10-27
+Authentication,PIN,AUTH-003,PIN Setup, Confirmation, and Quick Login,Functional,Completed,Pending,Pending,Pending,In Progress,High,1,Frontend Lead,Stored in Context,2023-10-27
+Dashboard,Metrics,DASH-001,Real-time Revenue, Transactions, and Customer counters,Functional,Completed,Pending,Pending,Pending,In Progress,High,1,Frontend Dev,Calculated in useMemo,2023-10-27
+Dashboard,Charts,DASH-002,Sales Overview Area Chart,Functional,Completed,Pending,Pending,Pending,In Progress,Low,2,Frontend Dev,Using Recharts library,2023-10-27
+Dashboard,Register,DASH-003,Open/Close Register Shift with Cash Tracking & Discrepancy,Functional,Completed,Pending,Pending,Pending,In Progress,High,1,Full Stack,Ledger integration done,2023-10-27
+POS,Catalog,POS-001,Product Grid with Category Filter and Search,Functional,Completed,Pending,Pending,Pending,In Progress,High,1,Frontend Dev,Optimized with filtering,2023-10-27
+POS,Cart,POS-002,Add/Remove Items, Update Quantity, Calculate Tax & Subtotal,Functional,Completed,Pending,Pending,Pending,In Progress,High,1,Frontend Dev,State managed in PosScreen,2023-10-27
+POS,Advanced,POS-003,Support for Product Variants in Cart,Functional,Completed,Pending,Pending,Pending,In Progress,Medium,2,Frontend Dev,Modal selector implemented,2023-10-27
+POS,Advanced,POS-004,Custom (Non-inventory) Item Entry,Functional,Completed,Pending,Pending,Pending,In Progress,Low,2,Frontend Dev,Ad-hoc pricing allowed,2023-10-27
+POS,Advanced,POS-005,Borrow Item Wizard (Auto-Supplier Creation & Ledger Entry),Functional,Completed,Pending,Pending,Pending,In Progress,Medium,3,Full Stack,Complex logic in PosScreen,2023-10-27
+POS,Advanced,POS-006,Held Orders (Park and Resume sales),Functional,Completed,Pending,Pending,Pending,In Progress,Medium,2,Frontend Dev,Local state persistence,2023-10-27
+POS,Checkout,POS-007,Payment Processing (Cash/Card) and Loyalty Redemption,Functional,Completed,Pending,Pending,Pending,In Progress,High,1,Full Stack,Points logic active,2023-10-27
+POS,Checkout,POS-008,Invoice Generation and PDF Printing,Functional,Completed,Pending,Pending,Pending,In Progress,High,1,Frontend Dev,jspdf-autotable integration,2023-10-27
+POS,Returns,POS-009,Sales Return/Refund Handling by Invoice ID,Functional,Completed,Pending,Pending,Pending,In Progress,High,2,Full Stack,Updates Stock and Ledger,2023-10-27
+Inventory,CRUD,INV-001,Product Creation and Editing with Image Upload,Functional,Completed,Pending,Pending,Pending,In Progress,High,1,Backend Dev,Base64 Image support,2023-10-27
+Inventory,Stock,INV-002,Stock Adjustment (Shrinkage/Damage/Correction),Functional,Completed,Pending,Pending,Pending,In Progress,Medium,2,Backend Dev,Ledger integration active,2023-10-27
+Inventory,Import,INV-003,CSV Import/Export for Bulk Data,Functional,Completed,Pending,Pending,Pending,In Progress,Low,3,Frontend Dev,FileReader API used,2023-10-27
+Purchasing,Order,PUR-001,Create PO and Direct Invoices,Functional,Completed,Pending,Pending,Pending,In Progress,High,2,Frontend Dev,,2023-10-27
+Purchasing,Receive,PUR-002,Receive Stock (Partial/Full) with Batch/Expiry,Functional,Completed,Pending,Pending,Pending,In Progress,High,2,Backend Dev,Updates Inventory Count,2023-10-27
+Purchasing,Return,PUR-003,Return Purchased Items to Supplier,Functional,Completed,Pending,Pending,Pending,In Progress,Medium,3,Backend Dev,Adjusts Supplier Balance,2023-10-27
+Finance,Ledger,FIN-001,General Ledger with Filtering (User/Account),Functional,Completed,Pending,Pending,Pending,In Progress,Medium,3,Backend Dev,React Table implementation,2023-10-27
+Finance,Expenses,FIN-002,Expense Tracking and Categorization,Functional,Completed,Pending,Pending,Pending,In Progress,Medium,2,Backend Dev,,2023-10-27
+Reports,Analytics,REP-001,Sales and Profit Analysis Charts,Functional,Completed,Pending,Pending,Pending,In Progress,Medium,3,Frontend Dev,Recharts integration,2023-10-27
+Settings,Profile,SET-001,Shop Profile, Logo Upload, and Contact Info,Functional,Completed,Pending,Pending,Pending,In Progress,Low,3,Frontend Dev,,2023-10-27
+Settings,Config,SET-002,System Configuration (Currency, Tax, Timezone),Non-Functional,Completed,Pending,Pending,Pending,In Progress,High,1,Administrator,,2023-10-27
+System,Theming,SYS-001,Dark/Light Mode and Accent Color Selection,Non-Functional,Completed,Pending,Pending,Pending,In Progress,Low,3,Frontend Dev,TailwindCSS Class Strategy,2023-10-27
+System,Security,SYS-002,Role Based Access Control (RBAC),Non-Functional,Completed,Pending,Pending,Pending,In Progress,High,1,Security Lead,Permissions checked in Layout,2023-10-27

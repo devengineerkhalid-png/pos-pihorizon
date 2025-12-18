@@ -1,6 +1,5 @@
 
 export enum View {
-  // Auth handled separately
   DASHBOARD = 'DASHBOARD',
   POS = 'POS',
   PRODUCTS = 'PRODUCTS',
@@ -13,7 +12,8 @@ export enum View {
   SETTINGS = 'SETTINGS',
   EXPENSES = 'EXPENSES',
   INVOICES = 'INVOICES',
-  LEDGER = 'LEDGER'
+  LEDGER = 'LEDGER',
+  TRANSFERS = 'TRANSFERS'
 }
 
 export enum AuthState {
@@ -35,7 +35,7 @@ export interface AppSettings {
     email: string;
     themeMode: 'light' | 'dark';
     accentColor: 'indigo' | 'emerald' | 'rose' | 'amber' | 'blue' | 'violet';
-    logo?: string; // New: Base64 string for shop logo
+    logo?: string;
 }
 
 export interface ProductVariant {
@@ -52,15 +52,16 @@ export interface Product {
   category: string;
   brand?: string;
   price: number;
+  wholesalePrice?: number; // New: Wholesale pricing
   costPrice?: number;
   stock: number;
-  minStockLevel?: number; // New: Reorder point
+  minStockLevel?: number;
   sku: string;
   image?: string;
   supplier?: string;
   taxRate?: number;
-  unit?: string; // piece, kg, etc.
-  location?: string; // storage location
+  unit?: string;
+  location?: string;
   hasBatch?: boolean;
   variants?: ProductVariant[];
 }
@@ -72,10 +73,10 @@ export interface CartItem extends Product {
   variantId?: string;
   variantName?: string;
   isCustom?: boolean; 
-  isBorrowed?: boolean; // New: Item borrowed from supplier
-  borrowedSupplierId?: string; // New: ID of supplier
-  borrowedCost?: number; // New: Cost of borrowing
-  returnedQuantity?: number; // New: Track how many have been returned
+  isBorrowed?: boolean;
+  borrowedSupplierId?: string;
+  borrowedCost?: number;
+  returnedQuantity?: number;
 }
 
 export interface HeldOrder {
@@ -83,7 +84,7 @@ export interface HeldOrder {
     customerName: string;
     items: CartItem[];
     date: Date;
-    expiration: Date; // New: When the quote expires
+    expiration: Date;
     total: number;
     note?: string;
 }
@@ -95,7 +96,7 @@ export interface User {
   email: string;
   phone?: string;
   status: 'Active' | 'Archived';
-  pin?: string; // New: PIN for auth
+  pin?: string;
 }
 
 export interface Role {
@@ -112,7 +113,7 @@ export interface Customer {
   address?: string;
   totalPurchases: number;
   lastVisit?: string;
-  loyaltyPoints: number; // New: Loyalty Points
+  loyaltyPoints: number;
 }
 
 export interface Supplier {
@@ -128,10 +129,9 @@ export interface Supplier {
 export interface PurchaseItem {
     productId: string;
     productName: string;
-    quantity: number; // Ordered Quantity
-    receivedQuantity: number; // Received so far
+    quantity: number;
+    receivedQuantity: number;
     cost: number;
-    // Default/Planned batch info (optional)
     batchNo?: string;
     expiryDate?: string;
 }
@@ -191,6 +191,12 @@ export interface Expense {
     attachment?: string;
 }
 
+export interface PaymentSplit {
+    method: 'Cash' | 'Card' | 'Online' | 'Store Credit';
+    amount: number;
+    reference?: string;
+}
+
 export interface Invoice {
   id: string;
   customerName: string;
@@ -199,9 +205,10 @@ export interface Invoice {
   status: 'Paid' | 'Pending' | 'Returned' | 'Partial Refund'; 
   items?: CartItem[];
   paymentMethod?: string;
-  loyaltyPointsUsed?: number; // New: Points redeemed
-  loyaltyPointsEarned?: number; // New: Points gained
-  returns?: ReturnHistoryEntry[]; // New: Track return history
+  paymentSplits?: PaymentSplit[]; // New: Support for split payments
+  loyaltyPointsUsed?: number;
+  loyaltyPointsEarned?: number;
+  returns?: ReturnHistoryEntry[];
 }
 
 export interface LedgerEntry {
@@ -211,11 +218,11 @@ export interface LedgerEntry {
     referenceId?: string;
     type: 'DEBIT' | 'CREDIT';
     amount: number;
-    accountId: string; // 'GENERAL', 'SALES', 'CASH', or SupplierID/CustomerID
+    accountId: string;
     accountName: string;
     category: 'SALES' | 'PURCHASE' | 'EXPENSE' | 'PAYMENT' | 'ADJUSTMENT';
-    userId?: string; // Auditing
-    userName?: string; // Auditing
+    userId?: string;
+    userName?: string;
 }
 
 export interface StockAdjustment {
@@ -223,20 +230,31 @@ export interface StockAdjustment {
     date: string;
     productId: string;
     productName: string;
-    quantity: number; // Negative for loss, positive for correction
+    quantity: number;
     reason: 'Damaged' | 'Expired' | 'Theft' | 'Correction' | 'Gift';
-    costAmount: number; // Value of stock lost/gained
+    costAmount: number;
 }
 
 export interface RegisterSession {
     id: string;
     openedAt: string;
+    openedBy?: string;
     closedAt?: string;
+    closedBy?: string;
     openingBalance: number;
-    expectedBalance: number; // opening + cash sales
+    expectedBalance: number;
     actualBalance?: number;
     discrepancy?: number;
     status: 'OPEN' | 'CLOSED';
     salesCount: number;
     totalSales: number;
+}
+
+export interface StockTransfer {
+    id: string;
+    date: string;
+    fromLocation: string;
+    toLocation: string;
+    items: { productId: string, productName: string, quantity: number }[];
+    status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
 }
