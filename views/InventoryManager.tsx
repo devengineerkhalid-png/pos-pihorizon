@@ -1,19 +1,23 @@
 
 import React, { useState, useMemo } from 'react';
 import { Button, Input, Table, Modal, Badge, Card, Select } from '../components/UIComponents';
-import { Search, Plus, Edit, Trash2, Package, TrendingUp, DollarSign, AlertTriangle, Layers, Filter, Boxes, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Package, TrendingUp, DollarSign, AlertTriangle, Layers, Filter, Boxes, ChevronDown, ChevronUp, LayoutGrid } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { View, Product, ProductVariant, ProductLot } from '../types';
+import { View, Product, ProductVariant, ProductLot, Catalog } from '../types';
 import { CatalogManager } from '../components/CatalogManager';
+import { CatalogStructure } from '../components/CatalogStructure';
 
 export const InventoryManager: React.FC = () => {
-    const { products, settings, stockAdjustments, addItem, updateItem, deleteItem, addStockAdjustment } = useStore();
+    const { products, catalogs, settings, stockAdjustments, addItem, updateItem, deleteItem, addStockAdjustment, addCatalog, updateCatalog, deleteCatalog } = useStore();
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+    const [isCatalogStructureOpen, setIsCatalogStructureOpen] = useState(false);
+    const [selectedCatalog, setSelectedCatalog] = useState<Catalog | null>(null);
     const [selectedProductForCatalog, setSelectedProductForCatalog] = useState<Product | null>(null);
     const [formData, setFormData] = useState<Partial<Product>>({});
-    const [activeTab, setActiveTab] = useState<'ALL' | 'LOW' | 'ADJUST'>('ALL');
+    const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'CATALOGS'>('PRODUCTS');
+    const [activeSubTab, setActiveSubTab] = useState<'ALL' | 'LOW' | 'ADJUST'>('ALL');
     const [showVariations, setShowVariations] = useState(false);
     const [newVariant, setNewVariant] = useState<Partial<ProductVariant>>({});
     const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
@@ -22,8 +26,8 @@ export const InventoryManager: React.FC = () => {
 
     const filteredProducts = useMemo(() => {
         return products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
-            .filter(p => activeTab === 'LOW' ? p.stock <= (p.minStockLevel || 10) : true);
-    }, [products, search, activeTab]);
+            .filter(p => activeSubTab === 'LOW' ? p.stock <= (p.minStockLevel || 10) : true);
+    }, [products, search, activeSubTab]);
 
     const totalValuation = useMemo(() => {
         return products.reduce((acc, p) => acc + (p.stock * (p.costPrice || 0)), 0);
@@ -174,9 +178,25 @@ export const InventoryManager: React.FC = () => {
                     <p className="text-sm text-slate-500">Real-time valuation: <span className="font-bold text-slate-900 dark:text-white">{settings.currencySymbol}{totalValuation.toLocaleString()}</span></p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="secondary" onClick={() => setActiveTab('ADJUST')} icon={<Filter size={16}/>}>History</Button>
+                    <Button variant="secondary" onClick={() => { setSelectedCatalog(null); setIsCatalogStructureOpen(true); }} icon={<LayoutGrid size={16}/>}>New Catalog</Button>
                     <Button onClick={() => { setFormData({}); setIsModalOpen(true); }} icon={<Plus size={18}/>}>Add Product</Button>
                 </div>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="flex gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg w-fit">
+                <button 
+                    onClick={() => setActiveTab('PRODUCTS')}
+                    className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'PRODUCTS' ? 'bg-white dark:bg-slate-700 text-primary-600 shadow-sm' : 'text-slate-500'}`}
+                >
+                    Products
+                </button>
+                <button 
+                    onClick={() => setActiveTab('CATALOGS')}
+                    className={`px-4 py-2 text-sm font-bold rounded-md transition-all ${activeTab === 'CATALOGS' ? 'bg-white dark:bg-slate-700 text-primary-600 shadow-sm' : 'text-slate-500'}`}
+                >
+                    Catalogs ({catalogs.length})
+                </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -209,6 +229,38 @@ export const InventoryManager: React.FC = () => {
                 </Card>
             </div>
 
+            {activeTab === 'PRODUCTS' ? (
+            <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card className="bg-primary-50 dark:bg-primary-900/10 border-primary-100 dark:border-primary-800">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <p className="text-[10px] font-bold text-primary-600 uppercase">Stock Valuation</p>
+                            <h3 className="text-2xl font-bold text-primary-700">{settings.currencySymbol}{totalValuation.toLocaleString()}</h3>
+                        </div>
+                        <DollarSign size={24} className="text-primary-500" />
+                    </div>
+                </Card>
+                <Card onClick={() => setActiveSubTab('LOW')} className={`cursor-pointer transition-all ${activeSubTab === 'LOW' ? 'ring-2 ring-rose-500' : ''}`}>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <p className="text-[10px] font-bold text-rose-500 uppercase">Alerts</p>
+                            <h3 className="text-2xl font-bold text-rose-600">{products.filter(p => p.stock <= (p.minStockLevel || 10)).length} Items</h3>
+                        </div>
+                        <AlertTriangle size={24} className="text-rose-500" />
+                    </div>
+                </Card>
+                <Card>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Total Units</p>
+                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{products.reduce((acc, p) => acc + p.stock, 0)}</h3>
+                        </div>
+                        <Package size={24} className="text-slate-400" />
+                    </div>
+                </Card>
+            </div>
+
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
                 <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex gap-4">
                     <div className="relative flex-1">
@@ -216,12 +268,12 @@ export const InventoryManager: React.FC = () => {
                         <Input placeholder="Search SKU or Product..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
                     </div>
                     <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
-                        <button onClick={() => setActiveTab('ALL')} className={`px-4 py-1.5 text-xs font-bold rounded-md ${activeTab === 'ALL' ? 'bg-white dark:bg-slate-700 text-primary-600 shadow-sm' : 'text-slate-500'}`}>All Items</button>
-                        <button onClick={() => setActiveTab('LOW')} className={`px-4 py-1.5 text-xs font-bold rounded-md ${activeTab === 'LOW' ? 'bg-white dark:bg-slate-700 text-rose-600 shadow-sm' : 'text-slate-500'}`}>Low Stock</button>
+                        <button onClick={() => setActiveSubTab('ALL')} className={`px-4 py-1.5 text-xs font-bold rounded-md ${activeSubTab === 'ALL' ? 'bg-white dark:bg-slate-700 text-primary-600 shadow-sm' : 'text-slate-500'}`}>All Items</button>
+                        <button onClick={() => setActiveSubTab('LOW')} className={`px-4 py-1.5 text-xs font-bold rounded-md ${activeSubTab === 'LOW' ? 'bg-white dark:bg-slate-700 text-rose-600 shadow-sm' : 'text-slate-500'}`}>Low Stock</button>
                     </div>
                 </div>
                 
-                {activeTab === 'ADJUST' ? (
+                {activeSubTab === 'ADJUST' ? (
                      <Table 
                         columns={[
                             { header: 'Date', accessor: 'date' },
@@ -267,6 +319,67 @@ export const InventoryManager: React.FC = () => {
                     />
                 )}
             </div>
+            </>
+            ) : (
+            <div className="space-y-6">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Product Catalogs</h2>
+                {catalogs.length === 0 ? (
+                    <Card>
+                        <div className="text-center py-12">
+                            <LayoutGrid size={48} className="mx-auto mb-4 text-slate-300" />
+                            <p className="text-slate-500 mb-4">No catalogs created yet</p>
+                            <Button onClick={() => { setSelectedCatalog(null); setIsCatalogStructureOpen(true); }}>Create First Catalog</Button>
+                        </div>
+                    </Card>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {catalogs.map(catalog => (
+                            <Card key={catalog.id} className="hover:shadow-lg transition-shadow cursor-pointer">
+                                <div onClick={() => { setSelectedCatalog(catalog); setIsCatalogStructureOpen(true); }}>
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 dark:text-white text-lg">{catalog.name}</h3>
+                                            {catalog.brand && <p className="text-xs text-slate-500">{catalog.brand}</p>}
+                                        </div>
+                                        <Badge variant="secondary">{catalog.category}</Badge>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-3 my-3 py-3 border-y border-slate-200 dark:border-slate-700">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase">Items</p>
+                                            <p className="text-lg font-bold text-slate-900 dark:text-white">{catalog.items?.length || 0}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase">Stock</p>
+                                            <p className="text-lg font-bold text-slate-900 dark:text-white">{catalog.items?.reduce((acc, i) => acc + i.stock, 0) || 0}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex gap-2 mt-4">
+                                    <Button 
+                                        size="sm" 
+                                        variant="secondary" 
+                                        className="flex-1"
+                                        onClick={() => { setSelectedCatalog(catalog); setIsCatalogStructureOpen(true); }}
+                                    >
+                                        Edit
+                                    </Button>
+                                    <Button 
+                                        size="sm" 
+                                        variant="secondary"
+                                        className="flex-1 hover:bg-rose-50 hover:text-rose-600"
+                                        onClick={() => deleteCatalog(catalog.id)}
+                                    >
+                                        <Trash2 size={14} />
+                                    </Button>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                )}
+            </div>
+            )}
 
             <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm(); }} title="Product Master Entry">
                 <div className="max-h-[80vh] overflow-y-auto space-y-6">
@@ -484,6 +597,26 @@ export const InventoryManager: React.FC = () => {
                     product={selectedProductForCatalog} 
                     onSave={handleSaveCatalog}
                     onClose={() => setIsCatalogOpen(false)}
+                    settings={settings}
+                />
+            )}
+
+            {isCatalogStructureOpen && (
+                <CatalogStructure 
+                    catalog={selectedCatalog}
+                    onSave={(catalog) => {
+                        if (selectedCatalog) {
+                            updateCatalog(catalog);
+                        } else {
+                            addCatalog(catalog);
+                        }
+                        setIsCatalogStructureOpen(false);
+                        setSelectedCatalog(null);
+                    }}
+                    onClose={() => {
+                        setIsCatalogStructureOpen(false);
+                        setSelectedCatalog(null);
+                    }}
                     settings={settings}
                 />
             )}

@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { View, Product, User, Supplier, Expense, Invoice, Customer, Role, Purchase, AppSettings, CartItem, LedgerEntry, StockAdjustment, RegisterSession, ReturnItem, ReturnHistoryEntry, PaymentSplit } from '../types';
+import { View, Product, User, Supplier, Expense, Invoice, Customer, Role, Purchase, AppSettings, CartItem, LedgerEntry, StockAdjustment, RegisterSession, ReturnItem, ReturnHistoryEntry, PaymentSplit, Catalog } from '../types';
 
 const INITIAL_PRODUCTS: Product[] = Array.from({ length: 15 }).map((_, i) => ({
     id: `p-${i}`,
@@ -15,6 +15,173 @@ const INITIAL_PRODUCTS: Product[] = Array.from({ length: 15 }).map((_, i) => ({
     image: `https://picsum.photos/200/200?random=${i}`,
     supplier: 'Acme Corp',
 }));
+
+const INITIAL_CATALOGS: Catalog[] = [
+  {
+    id: 'cat-1',
+    name: 'Premium T-Shirts',
+    brand: 'StyleBrand',
+    category: 'Apparel',
+    description: 'High-quality cotton t-shirts',
+    items: [
+      {
+        id: 'item-1',
+        catalogId: 'cat-1',
+        itemId: 'ITEM-TSH-001',
+        sku: 'TSH-RED-M',
+        name: 'Red T-Shirt Medium',
+        price: 29.99,
+        costPrice: 12.50,
+        wholesalePrice: 18.00,
+        stock: 150,
+        location: 'Shelf A1',
+        lots: [
+          {
+            id: 'lot-1',
+            lotNumber: 'ABC-001',
+            quantity: 100,
+            location: 'Shelf A1',
+            expiryDate: '2027-12-31',
+            manufacturingDate: '2024-01-10',
+            costPrice: 12.50,
+            receivedDate: '2024-01-12',
+            status: 'Active'
+          },
+          {
+            id: 'lot-2',
+            lotNumber: 'ABC-002',
+            quantity: 50,
+            location: 'Shelf A2',
+            expiryDate: '2028-06-30',
+            manufacturingDate: '2024-06-15',
+            costPrice: 13.00,
+            receivedDate: '2024-06-17',
+            status: 'Active'
+          }
+        ]
+      },
+      {
+        id: 'item-2',
+        catalogId: 'cat-1',
+        itemId: 'ITEM-TSH-002',
+        sku: 'TSH-BLUE-L',
+        name: 'Blue T-Shirt Large',
+        price: 29.99,
+        costPrice: 12.50,
+        wholesalePrice: 18.00,
+        stock: 200,
+        location: 'Shelf B1',
+        lots: [
+          {
+            id: 'lot-3',
+            lotNumber: 'BCD-001',
+            quantity: 200,
+            location: 'Shelf B1',
+            expiryDate: '2027-12-31',
+            manufacturingDate: '2024-02-05',
+            costPrice: 12.50,
+            receivedDate: '2024-02-07',
+            status: 'Active'
+          }
+        ]
+      }
+    ],
+    attributes: [
+      {
+        id: 'attr-1',
+        name: 'Color',
+        values: ['Red', 'Blue', 'Black', 'White']
+      },
+      {
+        id: 'attr-2',
+        name: 'Size',
+        values: ['Small', 'Medium', 'Large', 'XL']
+      }
+    ]
+  },
+  {
+    id: 'cat-2',
+    name: 'Electronics Accessories',
+    brand: 'TechGear',
+    category: 'Electronics',
+    description: 'Mobile and laptop accessories',
+    items: [
+      {
+        id: 'item-3',
+        catalogId: 'cat-2',
+        itemId: 'ITEM-ACC-001',
+        sku: 'CHARGER-USB-C',
+        name: 'USB-C Charger 65W',
+        price: 49.99,
+        costPrice: 18.00,
+        wholesalePrice: 30.00,
+        stock: 85,
+        location: 'Shelf C1',
+        lots: [
+          {
+            id: 'lot-4',
+            lotNumber: 'EFG-001',
+            quantity: 50,
+            location: 'Shelf C1',
+            expiryDate: '2026-12-31',
+            manufacturingDate: '2024-01-01',
+            costPrice: 18.00,
+            receivedDate: '2024-01-05',
+            status: 'Active'
+          },
+          {
+            id: 'lot-5',
+            lotNumber: 'EFG-002',
+            quantity: 35,
+            location: 'Shelf C2',
+            expiryDate: '2026-12-31',
+            manufacturingDate: '2024-05-20',
+            costPrice: 18.50,
+            receivedDate: '2024-05-22',
+            status: 'Active'
+          }
+        ]
+      },
+      {
+        id: 'item-4',
+        catalogId: 'cat-2',
+        itemId: 'ITEM-ACC-002',
+        sku: 'CABLE-HDMI-2M',
+        name: 'HDMI Cable 2M',
+        price: 19.99,
+        costPrice: 6.50,
+        wholesalePrice: 10.00,
+        stock: 250,
+        location: 'Shelf D1',
+        lots: [
+          {
+            id: 'lot-6',
+            lotNumber: 'HIJ-001',
+            quantity: 250,
+            location: 'Shelf D1',
+            expiryDate: '2027-12-31',
+            manufacturingDate: '2024-03-10',
+            costPrice: 6.50,
+            receivedDate: '2024-03-12',
+            status: 'Active'
+          }
+        ]
+      }
+    ],
+    attributes: [
+      {
+        id: 'attr-3',
+        name: 'Type',
+        values: ['Charger', 'Cable', 'Adapter']
+      },
+      {
+        id: 'attr-4',
+        name: 'Connector',
+        values: ['USB-C', 'Micro USB', 'Lightning', 'HDMI']
+      }
+    ]
+  }
+];
 
 const INITIAL_CUSTOMERS: Customer[] = Array.from({ length: 5 }).map((_, i) => ({
     id: `c-${i}`, name: `Customer ${i+1}`, phone: '555-010'+i, email: `cust${i}@mail.com`, totalPurchases: i*150, lastVisit: '2023-10-20', loyaltyPoints: i * 50
@@ -53,6 +220,7 @@ const THEME_COLORS = {
 
 interface StoreContextType {
     products: Product[];
+    catalogs: Catalog[];
     suppliers: Supplier[];
     customers: Customer[];
     users: User[];
@@ -68,6 +236,9 @@ interface StoreContextType {
     addItem: (type: View, item: any) => void;
     updateItem: (type: View, item: any) => void;
     deleteItem: (type: View, id: string) => void;
+    addCatalog: (catalog: Catalog) => void;
+    updateCatalog: (catalog: Catalog) => void;
+    deleteCatalog: (catalogId: string) => void;
     updateSettings: (newSettings: Partial<AppSettings>) => void;
     processSalesReturn: (invoiceId: string, items: ReturnItem[]) => void;
     returnPurchase: (purchaseId: string, items: ReturnItem[]) => void;
@@ -85,6 +256,7 @@ const StoreContext = createContext<StoreContextType | undefined>(undefined);
 export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [isLoaded, setIsLoaded] = useState(false);
     const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+    const [catalogs, setCatalogs] = useState<Catalog[]>(INITIAL_CATALOGS);
     const [suppliers, setSuppliers] = useState<Supplier[]>(INITIAL_SUPPLIERS);
     const [customers, setCustomers] = useState<Customer[]>(INITIAL_CUSTOMERS);
     const [users, setUsers] = useState<User[]>(INITIAL_USERS);
@@ -324,6 +496,18 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setProducts(prev => prev.map(p => p.id === adjustment.productId ? { ...p, stock: p.stock + adjustment.quantity } : p));
     };
 
+    const addCatalog = (catalog: Catalog) => {
+        setCatalogs(prev => [...prev, catalog]);
+    };
+
+    const updateCatalog = (catalog: Catalog) => {
+        setCatalogs(prev => prev.map(c => c.id === catalog.id ? catalog : c));
+    };
+
+    const deleteCatalog = (catalogId: string) => {
+        setCatalogs(prev => prev.filter(c => c.id !== catalogId));
+    };
+
     const receivePurchaseItems = (purchaseId: string, items: {productId: string, quantity: number, batchNo?: string, expiryDate?: string}[]) => {
         const purchase = purchases.find(p => p.id === purchaseId);
         if(!purchase) return;
@@ -377,8 +561,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     return (
         <StoreContext.Provider value={{
-            products, suppliers, customers, users, expenses, invoices, roles, purchases, settings, ledger, registerSession, stockAdjustments, currentUser,
-            addItem, updateItem, deleteItem, updateSettings, addStockAdjustment, openRegister, closeRegister, login, logout, registerUser, returnPurchase, receivePurchaseItems, processSalesReturn
+            products, catalogs, suppliers, customers, users, expenses, invoices, roles, purchases, settings, ledger, registerSession, stockAdjustments, currentUser,
+            addItem, updateItem, deleteItem, addCatalog, updateCatalog, deleteCatalog, updateSettings, addStockAdjustment, openRegister, closeRegister, login, logout, registerUser, returnPurchase, receivePurchaseItems, processSalesReturn
         }}>
             {children}
         </StoreContext.Provider>
