@@ -159,7 +159,7 @@ export const InventoryManager: React.FC = () => {
                 </div>
             </Modal>
 
-            {selectedProductForCatalog && (
+            {selectedProductForCatalog && isCatalogOpen && (
                 <CatalogManager 
                     product={selectedProductForCatalog} 
                     onSave={handleSaveCatalog}
@@ -167,3 +167,6 @@ export const InventoryManager: React.FC = () => {
                     settings={settings}
                 />
             )}
+        </div>
+    );
+};
