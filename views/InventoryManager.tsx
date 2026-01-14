@@ -1,9 +1,9 @@
 
 import React, { useState, useMemo } from 'react';
 import { Button, Input, Table, Modal, Badge, Card, Select } from '../components/UIComponents';
-import { Search, Plus, Edit, Trash2, Package, TrendingUp, DollarSign, AlertTriangle, Layers, Filter, Boxes } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Package, TrendingUp, DollarSign, AlertTriangle, Layers, Filter, Boxes, ChevronDown, ChevronUp } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { View, Product } from '../types';
+import { View, Product, ProductVariant, ProductLot } from '../types';
 import { CatalogManager } from '../components/CatalogManager';
 
 export const InventoryManager: React.FC = () => {
@@ -14,6 +14,11 @@ export const InventoryManager: React.FC = () => {
     const [selectedProductForCatalog, setSelectedProductForCatalog] = useState<Product | null>(null);
     const [formData, setFormData] = useState<Partial<Product>>({});
     const [activeTab, setActiveTab] = useState<'ALL' | 'LOW' | 'ADJUST'>('ALL');
+    const [showVariations, setShowVariations] = useState(false);
+    const [newVariant, setNewVariant] = useState<Partial<ProductVariant>>({});
+    const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+    const [newLot, setNewLot] = useState<Partial<ProductLot>>({});
+    const [expandedVariants, setExpandedVariants] = useState<Set<string>>(new Set());
 
     const filteredProducts = useMemo(() => {
         return products.filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
@@ -28,6 +33,127 @@ export const InventoryManager: React.FC = () => {
         const item = { ...formData, id: formData.id || Date.now().toString() };
         formData.id ? updateItem(View.PRODUCTS, item) : addItem(View.PRODUCTS, item);
         setIsModalOpen(false);
+        resetForm();
+    };
+
+    const resetForm = () => {
+        setFormData({});
+        setShowVariations(false);
+        setNewVariant({});
+        setSelectedVariantId(null);
+        setNewLot({});
+        setExpandedVariants(new Set());
+    };
+
+    const handleAddVariant = () => {
+        if (!newVariant.name || !newVariant.sku) {
+            alert('Please fill in variant name and SKU');
+            return;
+        }
+        const variant: ProductVariant = {
+            id: Date.now().toString(),
+            name: newVariant.name,
+            sku: newVariant.sku,
+            price: newVariant.price || formData.price || 0,
+            costPrice: newVariant.costPrice || formData.costPrice || 0,
+            stock: newVariant.stock || 0,
+            lots: []
+        };
+        const variants = formData.variants || [];
+        setFormData({...formData, variants: [...variants, variant]});
+        setNewVariant({});
+        setSelectedVariantId(variant.id);
+    };
+
+    const handleAddLot = () => {
+        const variants = formData.variants || [];
+        const selectedVariant = variants.find(v => v.id === selectedVariantId);
+        
+        if (!selectedVariant || !newLot.lotNumber || newLot.quantity === undefined) {
+            alert('Please fill in lot number and quantity');
+            return;
+        }
+
+        const lot: ProductLot = {
+            id: Date.now().toString(),
+            lotNumber: newLot.lotNumber,
+            quantity: newLot.quantity,
+            expiryDate: newLot.expiryDate,
+            manufacturingDate: newLot.manufacturingDate,
+            costPrice: newLot.costPrice || selectedVariant.costPrice || 0,
+            receivedDate: newLot.receivedDate || new Date().toISOString().split('T')[0],
+            status: 'Active'
+        };
+
+        const updatedVariants = variants.map(v => {
+            if (v.id === selectedVariant.id) {
+                const lots = v.lots || [];
+                const totalQuantity = lots.reduce((acc, l) => acc + l.quantity, 0) + lot.quantity;
+                return {
+                    ...v,
+                    lots: [...lots, lot],
+                    stock: totalQuantity
+                };
+            }
+            return v;
+        });
+
+        setFormData({...formData, variants: updatedVariants});
+        setNewLot({});
+    };
+
+    const handleDeleteVariant = (variantId: string) => {
+        const variants = (formData.variants || []).filter(v => v.id !== variantId);
+        setFormData({...formData, variants});
+        if (selectedVariantId === variantId) {
+            setSelectedVariantId(null);
+        }
+    };
+
+    const handleDeleteLot = (lotId: string) => {
+        const variants = formData.variants || [];
+        const updatedVariants = variants.map(v => {
+            if (v.id === selectedVariantId && v.lots) {
+                const deletedLot = v.lots.find(l => l.id === lotId);
+                const newStock = v.stock - (deletedLot?.quantity || 0);
+                return {
+                    ...v,
+                    lots: v.lots.filter(l => l.id !== lotId),
+                    stock: newStock
+                };
+            }
+            return v;
+        });
+        setFormData({...formData, variants: updatedVariants});
+    };
+
+    const handleUpdateLot = (lotId: string, updates: Partial<ProductLot>) => {
+        const variants = formData.variants || [];
+        const updatedVariants = variants.map(v => {
+            if (v.id === selectedVariantId && v.lots) {
+                const oldQuantity = v.lots.find(l => l.id === lotId)?.quantity || 0;
+                const newQuantity = updates.quantity !== undefined ? updates.quantity : oldQuantity;
+                const quantityDiff = newQuantity - oldQuantity;
+
+                return {
+                    ...v,
+                    lots: v.lots.map(l => l.id === lotId ? { ...l, ...updates } : l),
+                    stock: v.stock + quantityDiff
+                };
+            }
+            return v;
+        });
+        setFormData({...formData, variants: updatedVariants});
+    };
+
+    const toggleVariantExpanded = (variantId: string) => {
+        const newExpanded = new Set(expandedVariants);
+        if (newExpanded.has(variantId)) {
+            newExpanded.delete(variantId);
+        } else {
+            newExpanded.add(variantId);
+        }
+        setExpandedVariants(newExpanded);
     };
 
     const handleOpenCatalog = (product: Product) => {
