@@ -396,25 +396,46 @@ export const PosScreen: React.FC = () => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                    {currentCart.items.map(item => (
-                        <div key={item.cartId} className="flex gap-3 items-center group">
-                            <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                    <h4 className="font-bold text-slate-800 dark:text-white text-sm truncate">{item.name}</h4>
-                                    {item.isBorrowed && <Badge variant="warning">Borrowed</Badge>}
+                    {currentCart.items.map(item => {
+                        const posItem = item as PosCartItem;
+                        const isCatalogItem = !!posItem.lotNumber;
+                        return (
+                            <div key={item.cartId} className={`flex gap-3 items-start group p-3 rounded-lg border transition-all ${isCatalogItem ? 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/10' : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900'}`}>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="font-bold text-slate-800 dark:text-white text-sm truncate">{item.name}</h4>
+                                        {item.isBorrowed && <Badge variant="warning">Borrowed</Badge>}
+                                        {isCatalogItem && <Badge variant="primary" className="text-xs">Catalog</Badge>}
+                                    </div>
+                                    <p className="text-xs text-slate-500">{settings.currencySymbol}{(currentCart.isWholesale ? (item.wholesalePrice || item.price) : item.price).toFixed(2)} each</p>
+                                    {isCatalogItem && (
+                                        <div className="mt-2 pt-2 border-t border-blue-200 dark:border-blue-800 space-y-1 text-xs">
+                                            <div className="flex gap-4">
+                                                <div>
+                                                    <span className="text-slate-500">Lot:</span>
+                                                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400 ml-1">{posItem.lotNumber}</span>
+                                                </div>
+                                                {posItem.expiryDate && (
+                                                    <div>
+                                                        <span className="text-slate-500">Expires:</span>
+                                                        <span className="font-bold text-slate-700 dark:text-slate-300 ml-1">{new Date(posItem.expiryDate).toLocaleDateString()}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
-                                <p className="text-xs text-slate-500">{settings.currencySymbol}{(currentCart.isWholesale ? (item.wholesalePrice || item.price) : item.price).toFixed(2)} each</p>
+                                <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
+                                    <button onClick={() => updateQuantity(item.cartId, -1)} className="p-1 hover:text-primary-600"><Minus size={14} /></button>
+                                    <span className="w-8 text-center text-xs font-bold">{item.quantity}</span>
+                                    <button onClick={() => updateQuantity(item.cartId, 1)} className="p-1 hover:text-primary-600"><Plus size={14} /></button>
+                                </div>
+                                <button onClick={() => updateActiveCart({ items: currentCart.items.filter(c => c.cartId !== item.cartId) })} className="p-1 text-slate-300 hover:text-rose-500 transition-colors">
+                                    <Trash2 size={16} />
+                                </button>
                             </div>
-                            <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1">
-                                <button onClick={() => updateQuantity(item.cartId, -1)} className="p-1 hover:text-primary-600"><Minus size={14} /></button>
-                                <span className="w-8 text-center text-xs font-bold">{item.quantity}</span>
-                                <button onClick={() => updateQuantity(item.cartId, 1)} className="p-1 hover:text-primary-600"><Plus size={14} /></button>
-                            </div>
-                            <button onClick={() => updateActiveCart({ items: currentCart.items.filter(c => c.cartId !== item.cartId) })} className="p-1 text-slate-300 hover:text-rose-500 transition-colors">
-                                <Trash2 size={16} />
-                            </button>
-                        </div>
-                    ))}
+                        );
+                    })}
                     {currentCart.items.length === 0 && (
                         <div className="h-full flex flex-col items-center justify-center opacity-20 py-20">
                             <ShoppingCart size={48} />
