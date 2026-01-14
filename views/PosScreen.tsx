@@ -312,13 +312,49 @@ export const PosScreen: React.FC = () => {
                 </div>
 
                 <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                    {CATEGORIES.map(cat => (
+                    <button 
+                        onClick={() => setActiveCategory('All Items')} 
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${activeCategory === 'All Items' ? 'bg-primary-600 text-white shadow-lg' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 hover:bg-slate-50'}`}
+                    >
+                        All Items
+                    </button>
+                    {catalogs.map(cat => (
+                        <button 
+                            key={cat.id}
+                            onClick={() => setActiveCategory(cat.name)} 
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-2 ${activeCategory === cat.name ? 'bg-primary-600 text-white shadow-lg' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 hover:bg-slate-50'}`}
+                        >
+                            <LayoutGrid size={14} /> {cat.name}
+                        </button>
+                    ))}
+                    {CATEGORIES.filter(c => c !== 'All Items').map(cat => (
                         <button key={cat} onClick={() => setActiveCategory(cat)} className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeCategory === cat ? 'bg-primary-600 text-white shadow-lg' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 hover:bg-slate-50'}`}>{cat}</button>
                     ))}
                 </div>
 
                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 pb-20">
+                        {/* Catalog Items */}
+                        {catalogs.filter(c => activeCategory === 'All Items' || activeCategory === c.name).map(catalog =>
+                            catalog.items?.map(item => (
+                                <div key={item.id} onClick={() => { setSelectedCatalogItem(item); setShowLotSelector(true); }} className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-900/10 rounded-xl shadow-sm border-2 border-blue-200 dark:border-blue-800 overflow-hidden cursor-pointer hover:shadow-md transition-all group relative hover:-translate-y-1">
+                                    <div className="h-32 w-full bg-blue-200 dark:bg-blue-900/30 flex items-center justify-center">
+                                        <LayoutGrid className="text-blue-400" size={32} />
+                                    </div>
+                                    <div className="p-3">
+                                        <Badge variant="primary" className="mb-2">{catalog.name}</Badge>
+                                        <h3 className="font-bold text-slate-800 dark:text-white truncate text-sm">{item.name}</h3>
+                                        <p className="text-xs text-slate-500 font-mono">{item.sku}</p>
+                                        <div className="flex justify-between items-center mt-2">
+                                            <span className="text-blue-600 dark:text-blue-400 font-bold">{settings.currencySymbol}{item.price.toFixed(2)}</span>
+                                            <Badge variant="secondary">Lots: {item.lots?.length || 0}</Badge>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+
+                        {/* Regular Products */}
                         {products.filter(p => (activeCategory === 'All Items' || p.category === activeCategory) && p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(product => (
                             <div key={product.id} onClick={() => addToCart(product)} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden cursor-pointer hover:shadow-md transition-all group relative hover:-translate-y-1">
                                 <div className="h-32 w-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
@@ -473,7 +509,63 @@ export const PosScreen: React.FC = () => {
                 </div>
             </Modal>
 
-            {/* Payment Modal */}
+            {/* Lot Selector Modal */}
+            <Modal isOpen={showLotSelector} onClose={() => { setShowLotSelector(false); setSelectedCatalogItem(null); setSelectedLot(null); }} title={`Select Lot - ${selectedCatalogItem?.name}`}>
+                <div className="space-y-4">
+                    {!selectedCatalogItem ? (
+                        <p className="text-slate-500 text-center py-8">No item selected</p>
+                    ) : selectedCatalogItem.lots && selectedCatalogItem.lots.length > 0 ? (
+                        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+                            <div className="grid grid-cols-3 gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
+                                <h4 className="font-bold text-slate-900 dark:text-white text-sm">Lot Number</h4>
+                                <h4 className="font-bold text-slate-900 dark:text-white text-sm">Qty Available</h4>
+                                <h4 className="font-bold text-slate-900 dark:text-white text-sm">Expiry Date</h4>
+                            </div>
+                            {selectedCatalogItem.lots.map(lot => (
+                                <button
+                                    key={lot.id}
+                                    onClick={() => setSelectedLot(lot)}
+                                    className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
+                                        selectedLot?.id === lot.id
+                                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                                            : 'border-slate-200 dark:border-slate-700 hover:border-primary-300'
+                                    }`}
+                                >
+                                    <div className="grid grid-cols-3 gap-3 items-center">
+                                        <div>
+                                            <p className="font-bold text-slate-900 dark:text-white">{lot.lotNumber}</p>
+                                        </div>
+                                        <div>
+                                            <Badge variant={lot.quantity > 0 ? 'success' : 'warning'}>
+                                                {lot.quantity} units
+                                            </Badge>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                {lot.expiryDate ? new Date(lot.expiryDate).toLocaleDateString() : 'N/A'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {lot.location && <p className="text-xs text-slate-500 mt-2">📍 {lot.location}</p>}
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <p className="text-slate-500 text-center py-8">No lots available for this item</p>
+                    )}
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <Button variant="secondary" onClick={() => { setShowLotSelector(false); setSelectedCatalogItem(null); setSelectedLot(null); }}>Cancel</Button>
+                        <Button 
+                            onClick={() => selectedCatalogItem && selectedLot && addCatalogItemToCart(selectedCatalogItem, selectedLot)}
+                            disabled={!selectedLot}
+                            icon={<Plus size={16} />}
+                        >
+                            Add to Cart
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
             <Modal isOpen={showPayment} onClose={() => setShowPayment(false)} title="Complete Transaction">
                 <div className="space-y-6">
                     <div className="bg-slate-900 text-white p-6 rounded-2xl text-center">
