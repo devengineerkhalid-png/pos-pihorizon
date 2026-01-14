@@ -4,9 +4,9 @@ import { Input, Button, Badge, Modal, Select } from '../components/UIComponents'
 import { 
     Search, Trash2, Plus, Minus, PauseCircle, CreditCard, ShoppingCart, 
     Tag, RotateCcw, PenTool, Printer, CheckCircle, Truck, Reply, 
-    Wallet, Info, ArrowRight, UserPlus, Handshake, X, PlusCircle 
+    Wallet, Info, ArrowRight, UserPlus, Handshake, X, PlusCircle, LayoutGrid 
 } from 'lucide-react';
-import { Product, CartItem, HeldOrder, View, Invoice, ReturnItem, PaymentSplit } from '../types';
+import { Product, CartItem, HeldOrder, View, Invoice, ReturnItem, PaymentSplit, Catalog, CatalogItem, ProductLot } from '../types';
 import { useStore } from '../context/StoreContext';
 import { generateInvoicePDF } from '../utils/pdfGenerator';
 
@@ -20,8 +20,14 @@ interface ActiveCart {
     discount: number;
 }
 
+interface PosCartItem extends CartItem {
+    lotId?: string;
+    lotNumber?: string;
+    expiryDate?: string;
+}
+
 export const PosScreen: React.FC = () => {
-    const { products, customers, suppliers, settings, invoices, addItem, processSalesReturn } = useStore();
+    const { products, catalogs, customers, suppliers, settings, invoices, addItem, processSalesReturn } = useStore();
 
     // --- Multi-Cart State ---
     const [activeCarts, setActiveCarts] = useState<ActiveCart[]>([
@@ -35,6 +41,9 @@ export const PosScreen: React.FC = () => {
     // UI Local States
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('All Items');
+    const [showLotSelector, setShowLotSelector] = useState(false);
+    const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
+    const [selectedLot, setSelectedLot] = useState<ProductLot | null>(null);
     
     // Modals
     const [showPayment, setShowPayment] = useState(false);
