@@ -185,6 +185,8 @@ export interface PurchaseItem {
     cost: number;
     batchNo?: string;
     expiryDate?: string;
+    catalogId?: string;
+    catalogItemId?: string;
 }
 
 export interface PurchaseReceiptItem {

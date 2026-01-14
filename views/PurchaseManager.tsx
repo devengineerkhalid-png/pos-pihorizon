@@ -1,13 +1,13 @@
 
 import React, { useState } from 'react';
 import { Button, Input, Table, Modal, Badge, Select, Card } from '../components/UIComponents';
-import { Plus, Search, Filter, Trash2, Calendar, User, Save, ArrowLeft, Package, Clock, CheckCircle, Truck, History, RotateCcw, Reply, AlertTriangle, Download } from 'lucide-react';
-import { Purchase, PurchaseItem, PurchaseHistoryEntry, View } from '../types';
+import { Plus, Search, Filter, Trash2, Calendar, User, Save, ArrowLeft, Package, Clock, CheckCircle, Truck, History, RotateCcw, Reply, AlertTriangle, Download, LayoutGrid, Minus } from 'lucide-react';
+import { Purchase, PurchaseItem, PurchaseHistoryEntry, View, Catalog, CatalogItem, ProductLot } from '../types';
 import { useStore } from '../context/StoreContext';
 import { generatePurchaseOrderPDF } from '../utils/pdfGenerator';
 
 export const PurchaseManager: React.FC = () => {
-    const { purchases, addItem, updateItem, suppliers, returnPurchase, receivePurchaseItems, settings } = useStore();
+    const { purchases, addItem, updateItem, suppliers, catalogs, returnPurchase, receivePurchaseItems, settings } = useStore();
     const [viewMode, setViewMode] = useState<'LIST' | 'CREATE' | 'DETAIL'>('LIST');
     
     // Changed from holding object to holding ID for reactivity
@@ -27,6 +27,11 @@ export const PurchaseManager: React.FC = () => {
     // Temp Item State for Create
     const [newItem, setNewItem] = useState<Partial<PurchaseItem>>({});
 
+    // Catalog Selection State
+    const [showCatalogSelector, setShowCatalogSelector] = useState(false);
+    const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
+    const [catalogQuantity, setCatalogQuantity] = useState('1');
+
     // Receive Modal State
     const [receivingItems, setReceivingItems] = useState<{id: string, qty: number, batch: string, expiry: string}[]>([]);
 
@@ -45,6 +50,23 @@ export const PurchaseManager: React.FC = () => {
             expiryDate: newItem.expiryDate
         } as PurchaseItem]);
         setNewItem({});
+    };
+
+    const handleAddCatalogItem = (catalogItem: CatalogItem, quantity: number) => {
+        setItems([...items, {
+            productId: catalogItem.id,
+            productName: catalogItem.name,
+            quantity: quantity,
+            receivedQuantity: createType === 'INVOICE' ? quantity : 0,
+            cost: catalogItem.costPrice,
+            batchNo: `NEW-${Date.now().toString().slice(-4)}`,
+            expiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            catalogId: catalogItem.catalogId,
+            catalogItemId: catalogItem.id
+        } as PurchaseItem]);
+        setShowCatalogSelector(false);
+        setSelectedCatalogItem(null);
+        setCatalogQuantity('1');
     };
 
     const handleSavePurchase = () => {
@@ -248,9 +270,10 @@ export const PurchaseManager: React.FC = () => {
                                 <div className={createType === 'ORDER' ? 'col-span-2' : ''}>
                                     <Input label="Cost" type="number" placeholder="0.00" value={newItem.cost || ''} onChange={e => setNewItem({...newItem, cost: Number(e.target.value)})} />
                                 </div>
-                                <div className={createType === 'ORDER' ? 'col-span-2' : ''}>
+                                <div className={createType === 'ORDER' ? 'col-span-2' : 'col-span-1'}>
                                     <Input label="Qty" type="number" placeholder="0" value={newItem.quantity || ''} onChange={e => setNewItem({...newItem, quantity: Number(e.target.value)})} />
                                 </div>
+                                <Button variant="outline" onClick={() => setShowCatalogSelector(true)} icon={<LayoutGrid size={16} />} title="Select from catalog">From Catalog</Button>
                             </div>
                             <Button className="w-full mb-6" variant="secondary" onClick={handleAddItem} icon={<Plus size={16} />}>Add Line Item</Button>
 
@@ -608,6 +631,80 @@ export const PurchaseManager: React.FC = () => {
                     actions={(item) => <Button variant="ghost" size="sm" onClick={() => { setSelectedPurchaseId(item.id); setViewMode('DETAIL'); }}>Manage</Button>}
                 />
             </div>
+
+            {/* Catalog Item Selector Modal */}
+            <Modal isOpen={showCatalogSelector} onClose={() => { setShowCatalogSelector(false); setSelectedCatalogItem(null); setCatalogQuantity('1'); }} title="Select from Catalog">
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4 max-h-[50vh] overflow-y-auto">
+                        {catalogs.map(catalog => (
+                            <div key={catalog.id} className="border-l-4 border-primary-500 pl-4 py-3">
+                                <h3 className="font-bold text-slate-900 dark:text-white mb-2">{catalog.name} ({catalog.brand})</h3>
+                                <div className="space-y-2">
+                                    {catalog.items?.map(item => (
+                                        <button
+                                            key={item.id}
+                                            onClick={() => setSelectedCatalogItem(item)}
+                                            className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
+                                                selectedCatalogItem?.id === item.id
+                                                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                                                    : 'border-slate-200 dark:border-slate-700 hover:border-primary-300'
+                                            }`}
+                                        >
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="font-bold text-slate-900 dark:text-white">{item.name}</p>
+                                                    <p className="text-xs text-slate-500">{item.sku}</p>
+                                                </div>
+                                                <Badge variant="secondary">{settings.currencySymbol}{item.costPrice.toFixed(2)}</Badge>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {selectedCatalogItem && (
+                        <div className="p-4 bg-primary-50 dark:bg-primary-900/10 rounded-xl border-2 border-primary-200 dark:border-primary-800 space-y-3">
+                            <h4 className="font-bold text-slate-900 dark:text-white">Quantity to Purchase</h4>
+                            <div className="flex items-end gap-3">
+                                <div className="flex-1">
+                                    <Input 
+                                        label="Units" 
+                                        type="number" 
+                                        value={catalogQuantity} 
+                                        onChange={(e) => setCatalogQuantity(Math.max(1, parseInt(e.target.value) || 1).toString())}
+                                        min="1"
+                                    />
+                                </div>
+                                <Button 
+                                    variant="secondary" 
+                                    onClick={() => setCatalogQuantity((Math.max(1, parseInt(catalogQuantity) - 1)).toString())}
+                                >
+                                    <Minus size={16} />
+                                </Button>
+                                <Button 
+                                    variant="secondary" 
+                                    onClick={() => setCatalogQuantity((parseInt(catalogQuantity) + 1).toString())}
+                                >
+                                    <Plus size={16} />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <Button variant="secondary" onClick={() => { setShowCatalogSelector(false); setSelectedCatalogItem(null); setCatalogQuantity('1'); }}>Cancel</Button>
+                        <Button 
+                            onClick={() => selectedCatalogItem && handleAddCatalogItem(selectedCatalogItem, parseInt(catalogQuantity) || 1)}
+                            disabled={!selectedCatalogItem}
+                            icon={<Plus size={16} />}
+                        >
+                            Add {catalogQuantity} to Purchase
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };
