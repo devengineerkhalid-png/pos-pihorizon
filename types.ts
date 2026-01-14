@@ -42,6 +42,7 @@ export interface ProductLot {
   id: string;
   lotNumber: string;
   quantity: number;
+  location?: string;
   expiryDate?: string;
   manufacturingDate?: string;
   costPrice: number;
@@ -49,24 +50,60 @@ export interface ProductLot {
   status: 'Active' | 'Expired' | 'Archived';
 }
 
-export interface ProductVariant {
+export interface ProductAttribute {
   id: string;
   name: string;
+  values: string[];
+}
+
+export interface ProductVariant {
+  id: string;
+  itemId: string;
   sku: string;
+  attributeValues: { [attributeName: string]: string };
   price: number;
-  stock: number;
   costPrice?: number;
+  wholesalePrice?: number;
+  stock: number;
   lots?: ProductLot[];
+}
+
+export interface CatalogItem {
+  id: string;
+  catalogId: string;
+  itemId: string;
+  sku: string;
+  name: string;
+  price: number;
+  costPrice?: number;
+  wholesalePrice?: number;
+  salePrice?: number;
+  stock: number;
+  location?: string;
+  lots?: ProductLot[];
+}
+
+export interface Catalog {
+  id: string;
+  name: string;
+  brand?: string;
+  category: string;
+  description?: string;
+  image?: string;
+  items: CatalogItem[];
+  attributes: ProductAttribute[];
 }
 
 export interface Product {
   id: string;
+  catalogId?: string;
   name: string;
   category: string;
   brand?: string;
   price: number;
-  wholesalePrice?: number; // New: Wholesale pricing
+  wholesalePrice?: number;
   costPrice?: number;
+  salePrice?: number;
   stock: number;
   minStockLevel?: number;
   sku: string;
@@ -77,6 +114,7 @@ export interface Product {
   location?: string;
   hasBatch?: boolean;
   variants?: ProductVariant[];
+  attributes?: ProductAttribute[];
 }
 
 export interface CartItem extends Product {
