@@ -634,17 +634,61 @@ export const PosScreen: React.FC = () => {
                         <h2 className="text-4xl font-bold mt-1">{settings.currencySymbol}{remainingToPay.toFixed(2)}</h2>
                     </div>
 
-                    <div className="bg-primary-50 dark:bg-primary-900/10 p-6 rounded-xl border-2 border-primary-200 dark:border-primary-800 text-center">
-                        <div className="flex items-center justify-center gap-2 mb-2">
-                            <Wallet className="text-primary-600" size={20} />
-                            <p className="font-bold text-slate-900 dark:text-white text-lg">Cash Payment</p>
+                    <div className="space-y-4">
+                        <h3 className="font-bold text-slate-900 dark:text-white">Select Payment Method</h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button 
+                                onClick={() => { setSplits([{ method: 'Cash', amount: remainingToPay }]); processFinalPayment(); }}
+                                className="p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-center"
+                            >
+                                <p className="text-2xl mb-1">💰</p>
+                                <p className="font-bold text-slate-900 dark:text-white text-sm">Cash</p>
+                            </button>
+
+                            <button 
+                                onClick={() => { setSplits([{ method: 'Card', amount: remainingToPay }]); processFinalPayment(); }}
+                                className="p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-center"
+                            >
+                                <p className="text-2xl mb-1">💳</p>
+                                <p className="font-bold text-slate-900 dark:text-white text-sm">Card</p>
+                            </button>
+
+                            <button 
+                                onClick={() => { setSplits([{ method: 'Online', amount: remainingToPay }]); processFinalPayment(); }}
+                                className="p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-center"
+                            >
+                                <p className="text-2xl mb-1">🌐</p>
+                                <p className="font-bold text-slate-900 dark:text-white text-sm">Online</p>
+                            </button>
+
+                            <button 
+                                onClick={() => setShowPayment(false)}
+                                className="p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-center"
+                            >
+                                <p className="text-2xl mb-1">🔄</p>
+                                <p className="font-bold text-slate-900 dark:text-white text-sm">Multiple</p>
+                            </button>
+
+                            <button 
+                                onClick={() => { setSplits([{ method: 'Balance', amount: remainingToPay }]); processFinalPayment(); }}
+                                className="p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-center"
+                            >
+                                <p className="text-2xl mb-1">📊</p>
+                                <p className="font-bold text-slate-900 dark:text-white text-sm">Balance</p>
+                            </button>
+
+                            <button 
+                                onClick={() => { setSplits([{ method: 'Loan', amount: remainingToPay }]); processFinalPayment(); }}
+                                className="p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-center"
+                            >
+                                <p className="text-2xl mb-1">📋</p>
+                                <p className="font-bold text-slate-900 dark:text-white text-sm">Loan</p>
+                            </button>
                         </div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Ready to receive payment</p>
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
                         <Button variant="secondary" onClick={() => setShowPayment(false)}>Cancel</Button>
-                        <Button onClick={() => { setSplits([{ method: 'Cash', amount: remainingToPay }]); processFinalPayment(); }} icon={<CheckCircle size={18} />}>Finalize</Button>
                     </div>
                 </div>
             </Modal>
