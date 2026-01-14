@@ -44,6 +44,7 @@ export const PosScreen: React.FC = () => {
     const [showLotSelector, setShowLotSelector] = useState(false);
     const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
     const [selectedLot, setSelectedLot] = useState<ProductLot | null>(null);
+    const [lotQuantity, setLotQuantity] = useState('1');
     
     // Modals
     const [showPayment, setShowPayment] = useState(false);
@@ -107,7 +108,7 @@ export const PosScreen: React.FC = () => {
         updateActiveCart({ items: newItems });
     };
 
-    const addCatalogItemToCart = (item: CatalogItem, lot: ProductLot) => {
+    const addCatalogItemToCart = (item: CatalogItem, lot: ProductLot, quantity: number = 1) => {
         const newCartItem: PosCartItem = {
             id: item.id,
             cartId: Date.now().toString(),
@@ -118,7 +119,7 @@ export const PosScreen: React.FC = () => {
             wholesalePrice: item.wholesalePrice,
             stock: item.stock,
             sku: item.sku,
-            quantity: 1,
+            quantity: quantity,
             lotId: lot.id,
             lotNumber: lot.lotNumber,
             expiryDate: lot.expiryDate
@@ -127,6 +128,7 @@ export const PosScreen: React.FC = () => {
         setShowLotSelector(false);
         setSelectedLot(null);
         setSelectedCatalogItem(null);
+        setLotQuantity('1');
     };
 
     const updateQuantity = (cartId: string, delta: number) => {
