@@ -268,19 +268,213 @@ export const InventoryManager: React.FC = () => {
                 )}
             </div>
 
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Product Master Entry">
-                <div className="grid grid-cols-2 gap-4">
-                    <Input label="Name" className="col-span-2" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} />
-                    <Input label="SKU / Barcode" value={formData.sku || ''} onChange={e => setFormData({...formData, sku: e.target.value})} />
-                    <Select label="Category" options={['Electronics', 'Apparel', 'Home', 'Beauty', 'Sports'].map(c => ({value: c, label: c}))} value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} />
-                    <Input label="Cost Price" type="number" value={formData.costPrice || ''} onChange={e => setFormData({...formData, costPrice: Number(e.target.value)})} />
-                    <Input label="Retail Price" type="number" value={formData.price || ''} onChange={e => setFormData({...formData, price: Number(e.target.value)})} />
-                    <Input label="Wholesale Price" type="number" value={formData.wholesalePrice || ''} onChange={e => setFormData({...formData, wholesalePrice: Number(e.target.value)})} />
-                    <Input label="Initial Stock" type="number" value={formData.stock || ''} onChange={e => setFormData({...formData, stock: Number(e.target.value)})} />
-                    <Input label="Min Alert Level" type="number" value={formData.minStockLevel || ''} onChange={e => setFormData({...formData, minStockLevel: Number(e.target.value)})} />
+            <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); resetForm(); }} title="Product Master Entry">
+                <div className="max-h-[80vh] overflow-y-auto space-y-6">
+                    {/* Basic Product Info */}
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4">Product Information</h3>
+                        <div className="grid grid-cols-2 gap-4">
+                            <Input label="Name" className="col-span-2" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} />
+                            <Input label="SKU / Barcode" value={formData.sku || ''} onChange={e => setFormData({...formData, sku: e.target.value})} />
+                            <Select label="Category" options={['Electronics', 'Apparel', 'Home', 'Beauty', 'Sports'].map(c => ({value: c, label: c}))} value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} />
+                            <Input label="Cost Price" type="number" value={formData.costPrice || ''} onChange={e => setFormData({...formData, costPrice: Number(e.target.value)})} />
+                            <Input label="Retail Price" type="number" value={formData.price || ''} onChange={e => setFormData({...formData, price: Number(e.target.value)})} />
+                            <Input label="Wholesale Price" type="number" value={formData.wholesalePrice || ''} onChange={e => setFormData({...formData, wholesalePrice: Number(e.target.value)})} />
+                            <Input label="Initial Stock" type="number" value={formData.stock || ''} onChange={e => setFormData({...formData, stock: Number(e.target.value)})} />
+                            <Input label="Min Alert Level" type="number" value={formData.minStockLevel || ''} onChange={e => setFormData({...formData, minStockLevel: Number(e.target.value)})} />
+                        </div>
+                    </div>
+
+                    {/* Variations Section */}
+                    <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Product Variations & Lots</h3>
+                            <button 
+                                onClick={() => setShowVariations(!showVariations)}
+                                className="text-xs text-primary-600 hover:text-primary-700 font-bold flex items-center gap-1"
+                            >
+                                {showVariations ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                {showVariations ? 'Hide' : 'Show'}
+                            </button>
+                        </div>
+
+                        {showVariations && (
+                            <div className="space-y-4 bg-slate-50 dark:bg-slate-800/30 p-4 rounded-lg border border-slate-200 dark:border-slate-700">
+                                {/* Add Variant Section */}
+                                <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-slate-200 dark:border-slate-700 space-y-3">
+                                    <h4 className="font-bold text-slate-900 dark:text-white text-sm">Add Variant</h4>
+                                    <Input
+                                        label="Variant Name"
+                                        placeholder="e.g., Red XL, Size M"
+                                        value={newVariant.name || ''}
+                                        onChange={e => setNewVariant({ ...newVariant, name: e.target.value })}
+                                    />
+                                    <Input
+                                        label="Variant SKU"
+                                        placeholder="Unique SKU"
+                                        value={newVariant.sku || ''}
+                                        onChange={e => setNewVariant({ ...newVariant, sku: e.target.value })}
+                                    />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <Input
+                                            label="Price"
+                                            type="number"
+                                            value={newVariant.price?.toString() || ''}
+                                            onChange={e => setNewVariant({ ...newVariant, price: Number(e.target.value) })}
+                                        />
+                                        <Input
+                                            label="Cost Price"
+                                            type="number"
+                                            value={newVariant.costPrice?.toString() || ''}
+                                            onChange={e => setNewVariant({ ...newVariant, costPrice: Number(e.target.value) })}
+                                        />
+                                    </div>
+                                    <Button size="sm" onClick={handleAddVariant}>Add Variant</Button>
+                                </div>
+
+                                {/* Variants List */}
+                                {formData.variants && formData.variants.length > 0 && (
+                                    <div className="space-y-2">
+                                        <h4 className="font-bold text-slate-900 dark:text-white text-sm">Variants</h4>
+                                        {formData.variants.map(variant => (
+                                            <div key={variant.id} className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                                                <div
+                                                    onClick={() => toggleVariantExpanded(variant.id)}
+                                                    className={`p-3 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 flex justify-between items-center ${
+                                                        selectedVariantId === variant.id ? 'bg-primary-50 dark:bg-primary-900/10' : ''
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center gap-3 flex-1">
+                                                        <button className="p-0">
+                                                            {expandedVariants.has(variant.id) ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                        </button>
+                                                        <div>
+                                                            <p className="font-bold text-slate-900 dark:text-white text-sm">{variant.name}</p>
+                                                            <p className="text-xs text-slate-500 font-mono">{variant.sku}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-xs text-slate-500">Stock: <span className="font-bold text-slate-900 dark:text-white">{variant.stock}</span></span>
+                                                        <button
+                                                            onClick={e => {
+                                                                e.stopPropagation();
+                                                                setSelectedVariantId(variant.id);
+                                                            }}
+                                                            className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded text-blue-600"
+                                                        >
+                                                            <Plus size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={e => {
+                                                                e.stopPropagation();
+                                                                handleDeleteVariant(variant.id);
+                                                            }}
+                                                            className="p-1 hover:bg-rose-100 dark:hover:bg-rose-900/20 rounded text-rose-600"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {expandedVariants.has(variant.id) && (
+                                                    <div className="border-t border-slate-200 dark:border-slate-700 p-3 bg-slate-50 dark:bg-slate-800/50 space-y-3">
+                                                        <h5 className="text-xs font-bold text-slate-900 dark:text-white uppercase">Lot Numbers</h5>
+
+                                                        {/* Add Lot Form */}
+                                                        {selectedVariantId === variant.id && (
+                                                            <div className="bg-white dark:bg-slate-700 p-3 rounded border border-slate-200 dark:border-slate-600 space-y-2">
+                                                                <Input
+                                                                    label="Lot Number"
+                                                                    placeholder="LOT-2024-001"
+                                                                    value={newLot.lotNumber || ''}
+                                                                    onChange={e => setNewLot({ ...newLot, lotNumber: e.target.value })}
+                                                                    className="text-sm"
+                                                                />
+                                                                <div className="grid grid-cols-2 gap-2">
+                                                                    <Input
+                                                                        label="Qty"
+                                                                        type="number"
+                                                                        value={newLot.quantity?.toString() || ''}
+                                                                        onChange={e => setNewLot({ ...newLot, quantity: Number(e.target.value) })}
+                                                                        className="text-sm"
+                                                                    />
+                                                                    <Input
+                                                                        label="Cost"
+                                                                        type="number"
+                                                                        value={newLot.costPrice?.toString() || ''}
+                                                                        onChange={e => setNewLot({ ...newLot, costPrice: Number(e.target.value) })}
+                                                                        className="text-sm"
+                                                                    />
+                                                                </div>
+                                                                <div className="grid grid-cols-2 gap-2">
+                                                                    <Input
+                                                                        label="Mfg Date"
+                                                                        type="date"
+                                                                        value={newLot.manufacturingDate || ''}
+                                                                        onChange={e => setNewLot({ ...newLot, manufacturingDate: e.target.value })}
+                                                                        className="text-sm"
+                                                                    />
+                                                                    <Input
+                                                                        label="Exp Date"
+                                                                        type="date"
+                                                                        value={newLot.expiryDate || ''}
+                                                                        onChange={e => setNewLot({ ...newLot, expiryDate: e.target.value })}
+                                                                        className="text-sm"
+                                                                    />
+                                                                </div>
+                                                                <Button size="sm" onClick={handleAddLot}>Add Lot</Button>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Lots Table */}
+                                                        {variant.lots && variant.lots.length > 0 ? (
+                                                            <div className="overflow-x-auto">
+                                                                <table className="w-full text-xs">
+                                                                    <thead>
+                                                                        <tr className="border-b border-slate-200 dark:border-slate-600">
+                                                                            <th className="text-left py-1 px-2 font-bold">Lot</th>
+                                                                            <th className="text-right py-1 px-2 font-bold">Qty</th>
+                                                                            <th className="text-center py-1 px-2 font-bold">Exp</th>
+                                                                            <th className="text-right py-1 px-2 font-bold">Action</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {variant.lots.map(lot => (
+                                                                            <tr key={lot.id} className="border-b border-slate-100 dark:border-slate-700">
+                                                                                <td className="py-1 px-2 font-mono text-xs">{lot.lotNumber}</td>
+                                                                                <td className="py-1 px-2 text-right font-bold">{lot.quantity}</td>
+                                                                                <td className="py-1 px-2 text-center text-xs text-slate-500">
+                                                                                    {lot.expiryDate ? new Date(lot.expiryDate).toLocaleDateString() : 'N/A'}
+                                                                                </td>
+                                                                                <td className="py-1 px-2 text-right">
+                                                                                    <button
+                                                                                        onClick={() => handleDeleteLot(lot.id)}
+                                                                                        className="text-rose-600 hover:text-rose-700"
+                                                                                    >
+                                                                                        <Trash2 size={12} />
+                                                                                    </button>
+                                                                                </td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-xs text-slate-500 text-center py-2">No lots. Click + to add.</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
+
                 <div className="flex justify-end mt-6 gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <Button variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                    <Button variant="secondary" onClick={() => { setIsModalOpen(false); resetForm(); }}>Cancel</Button>
                     <Button onClick={handleSave}>Save Item</Button>
                 </div>
             </Modal>
