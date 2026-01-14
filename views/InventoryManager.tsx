@@ -1,14 +1,17 @@
 
 import React, { useState, useMemo } from 'react';
 import { Button, Input, Table, Modal, Badge, Card, Select } from '../components/UIComponents';
-import { Search, Plus, Edit, Trash2, Package, TrendingUp, DollarSign, AlertTriangle, Layers, Filter } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Package, TrendingUp, DollarSign, AlertTriangle, Layers, Filter, Boxes } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { View, Product } from '../types';
+import { CatalogManager } from '../components/CatalogManager';
 
 export const InventoryManager: React.FC = () => {
     const { products, settings, stockAdjustments, addItem, updateItem, deleteItem, addStockAdjustment } = useStore();
     const [search, setSearch] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+    const [selectedProductForCatalog, setSelectedProductForCatalog] = useState<Product | null>(null);
     const [formData, setFormData] = useState<Partial<Product>>({});
     const [activeTab, setActiveTab] = useState<'ALL' | 'LOW' | 'ADJUST'>('ALL');
 
@@ -25,6 +28,16 @@ export const InventoryManager: React.FC = () => {
         const item = { ...formData, id: formData.id || Date.now().toString() };
         formData.id ? updateItem(View.PRODUCTS, item) : addItem(View.PRODUCTS, item);
         setIsModalOpen(false);
+    };
+
+    const handleOpenCatalog = (product: Product) => {
+        setSelectedProductForCatalog(product);
+        setIsCatalogOpen(true);
+    };
+
+    const handleSaveCatalog = (product: Product) => {
+        updateItem(View.PRODUCTS, product);
+        setIsCatalogOpen(false);
     };
 
     return (
@@ -120,6 +133,7 @@ export const InventoryManager: React.FC = () => {
                         data={filteredProducts}
                         actions={(p) => (
                             <div className="flex gap-1 justify-end">
+                                <button onClick={() => handleOpenCatalog(p)} className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-blue-600 rounded-lg" title="Manage Catalog & Variants"><Boxes size={16}/></button>
                                 <button onClick={() => { setFormData(p); setIsModalOpen(true); }} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"><Edit size={16}/></button>
                                 <button onClick={() => deleteItem(View.PRODUCTS, p.id)} className="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/20 text-rose-500 rounded-lg"><Trash2 size={16}/></button>
                             </div>
@@ -144,6 +158,12 @@ export const InventoryManager: React.FC = () => {
                     <Button onClick={handleSave}>Save Item</Button>
                 </div>
             </Modal>
-        </div>
-    );
-};
+
+            {selectedProductForCatalog && (
+                <CatalogManager 
+                    product={selectedProductForCatalog} 
+                    onSave={handleSaveCatalog}
+                    onClose={() => setIsCatalogOpen(false)}
+                    settings={settings}
+                />
+            )}

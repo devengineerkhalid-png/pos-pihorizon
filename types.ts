@@ -38,12 +38,25 @@ export interface AppSettings {
     logo?: string;
 }
 
+export interface ProductLot {
+  id: string;
+  lotNumber: string;
+  quantity: number;
+  expiryDate?: string;
+  manufacturingDate?: string;
+  costPrice: number;
+  receivedDate: string;
+  status: 'Active' | 'Expired' | 'Archived';
+}
+
 export interface ProductVariant {
   id: string;
   name: string;
   sku: string;
   price: number;
   stock: number;
+  costPrice?: number;
+  lots?: ProductLot[];
 }
 
 export interface Product {
