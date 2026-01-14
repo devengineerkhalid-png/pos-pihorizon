@@ -4,11 +4,13 @@ import { Input, Button, Badge, Modal, Select } from '../components/UIComponents'
 import { 
     Search, Trash2, Plus, Minus, PauseCircle, CreditCard, ShoppingCart, 
     Tag, RotateCcw, PenTool, Printer, CheckCircle, Truck, Reply, 
-    Wallet, Info, ArrowRight, UserPlus, Handshake, X, PlusCircle, LayoutGrid 
+    Wallet, Info, ArrowRight, UserPlus, Handshake, X, PlusCircle, LayoutGrid,
+    Banknote, Globe, Repeat2, TrendingUp, FileText, Smartphone
 } from 'lucide-react';
 import { Product, CartItem, HeldOrder, View, Invoice, ReturnItem, PaymentSplit, Catalog, CatalogItem, ProductLot } from '../types';
 import { useStore } from '../context/StoreContext';
 import { generateInvoicePDF } from '../utils/pdfGenerator';
+import { PAYMENT_METHODS_CONFIG, PaymentMethodType } from '../utils/paymentUtils';
 
 const CATEGORIES = ['All Items', 'Electronics', 'Apparel', 'Home', 'Beauty', 'Sports'];
 
@@ -637,53 +639,36 @@ export const PosScreen: React.FC = () => {
                     <div className="space-y-4">
                         <h3 className="font-bold text-slate-900 dark:text-white">Select Payment Method</h3>
                         <div className="grid grid-cols-2 gap-3">
-                            <button 
-                                onClick={() => { setSplits([{ method: 'Cash', amount: remainingToPay }]); processFinalPayment(); }}
-                                className="p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-center"
-                            >
-                                <p className="text-2xl mb-1">💰</p>
-                                <p className="font-bold text-slate-900 dark:text-white text-sm">Cash</p>
-                            </button>
-
-                            <button 
-                                onClick={() => { setSplits([{ method: 'Card', amount: remainingToPay }]); processFinalPayment(); }}
-                                className="p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-center"
-                            >
-                                <p className="text-2xl mb-1">💳</p>
-                                <p className="font-bold text-slate-900 dark:text-white text-sm">Card</p>
-                            </button>
-
-                            <button 
-                                onClick={() => { setSplits([{ method: 'Online', amount: remainingToPay }]); processFinalPayment(); }}
-                                className="p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-center"
-                            >
-                                <p className="text-2xl mb-1">🌐</p>
-                                <p className="font-bold text-slate-900 dark:text-white text-sm">Online</p>
-                            </button>
-
-                            <button 
-                                onClick={() => setShowPayment(false)}
-                                className="p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-center"
-                            >
-                                <p className="text-2xl mb-1">🔄</p>
-                                <p className="font-bold text-slate-900 dark:text-white text-sm">Multiple</p>
-                            </button>
-
-                            <button 
-                                onClick={() => { setSplits([{ method: 'Balance', amount: remainingToPay }]); processFinalPayment(); }}
-                                className="p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-center"
-                            >
-                                <p className="text-2xl mb-1">📊</p>
-                                <p className="font-bold text-slate-900 dark:text-white text-sm">Balance</p>
-                            </button>
-
-                            <button 
-                                onClick={() => { setSplits([{ method: 'Loan', amount: remainingToPay }]); processFinalPayment(); }}
-                                className="p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10 transition-all text-center"
-                            >
-                                <p className="text-2xl mb-1">📋</p>
-                                <p className="font-bold text-slate-900 dark:text-white text-sm">Loan</p>
-                            </button>
+                            {Object.entries(PAYMENT_METHODS_CONFIG).map(([key, config]) => {
+                                const iconMap: Record<string, React.ReactNode> = {
+                                  'Banknote': <Banknote className={`w-8 h-8 mx-auto mb-2 ${config.color}`} />,
+                                  'CreditCard': <CreditCard className={`w-8 h-8 mx-auto mb-2 ${config.color}`} />,
+                                  'Smartphone': <Smartphone className={`w-8 h-8 mx-auto mb-2 ${config.color}`} />,
+                                  'Repeat2': <Repeat2 className={`w-8 h-8 mx-auto mb-2 ${config.color}`} />,
+                                  'TrendingUp': <TrendingUp className={`w-8 h-8 mx-auto mb-2 ${config.color}`} />,
+                                  'FileText': <FileText className={`w-8 h-8 mx-auto mb-2 ${config.color}`} />
+                                };
+                                
+                                const isMultiple = key === 'Multiple';
+                                return (
+                                    <button 
+                                        key={key}
+                                        onClick={() => {
+                                            if (isMultiple) {
+                                                setShowPayment(false);
+                                            } else {
+                                                setSplits([{ method: key as PaymentMethodType, amount: remainingToPay }]);
+                                                processFinalPayment();
+                                            }
+                                        }}
+                                        className={`p-4 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-primary-500 transition-all text-center ${config.bgColor}`}
+                                    >
+                                        {iconMap[config.iconName]}
+                                        <p className="font-bold text-slate-900 dark:text-white text-sm">{config.label}</p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{config.description}</p>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 
