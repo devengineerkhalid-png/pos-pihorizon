@@ -533,58 +533,96 @@ export const PosScreen: React.FC = () => {
             </Modal>
 
             {/* Lot Selector Modal */}
-            <Modal isOpen={showLotSelector} onClose={() => { setShowLotSelector(false); setSelectedCatalogItem(null); setSelectedLot(null); }} title={`Select Lot - ${selectedCatalogItem?.name}`}>
+            <Modal isOpen={showLotSelector} onClose={() => { setShowLotSelector(false); setSelectedCatalogItem(null); setSelectedLot(null); setLotQuantity('1'); }} title={`Select Lot - ${selectedCatalogItem?.name}`}>
                 <div className="space-y-4">
                     {!selectedCatalogItem ? (
                         <p className="text-slate-500 text-center py-8">No item selected</p>
                     ) : selectedCatalogItem.lots && selectedCatalogItem.lots.length > 0 ? (
-                        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-                            <div className="grid grid-cols-3 gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
-                                <h4 className="font-bold text-slate-900 dark:text-white text-sm">Lot Number</h4>
-                                <h4 className="font-bold text-slate-900 dark:text-white text-sm">Qty Available</h4>
-                                <h4 className="font-bold text-slate-900 dark:text-white text-sm">Expiry Date</h4>
+                        <div className="space-y-4">
+                            <div className="space-y-3 max-h-[40vh] overflow-y-auto">
+                                <div className="grid grid-cols-3 gap-3 pb-3 border-b border-slate-200 dark:border-slate-700">
+                                    <h4 className="font-bold text-slate-900 dark:text-white text-sm">Lot Number</h4>
+                                    <h4 className="font-bold text-slate-900 dark:text-white text-sm">Qty Available</h4>
+                                    <h4 className="font-bold text-slate-900 dark:text-white text-sm">Expiry Date</h4>
+                                </div>
+                                {selectedCatalogItem.lots.map(lot => (
+                                    <button
+                                        key={lot.id}
+                                        onClick={() => { setSelectedLot(lot); setLotQuantity('1'); }}
+                                        className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
+                                            selectedLot?.id === lot.id
+                                                ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                                                : 'border-slate-200 dark:border-slate-700 hover:border-primary-300'
+                                        }`}
+                                    >
+                                        <div className="grid grid-cols-3 gap-3 items-center">
+                                            <div>
+                                                <p className="font-bold text-slate-900 dark:text-white">{lot.lotNumber}</p>
+                                            </div>
+                                            <div>
+                                                <Badge variant={lot.quantity > 0 ? 'success' : 'warning'}>
+                                                    {lot.quantity} units
+                                                </Badge>
+                                            </div>
+                                            <div>
+                                                <p className="text-sm text-slate-600 dark:text-slate-400">
+                                                    {lot.expiryDate ? new Date(lot.expiryDate).toLocaleDateString() : 'N/A'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {lot.location && <p className="text-xs text-slate-500 mt-2">📍 {lot.location}</p>}
+                                    </button>
+                                ))}
                             </div>
-                            {selectedCatalogItem.lots.map(lot => (
-                                <button
-                                    key={lot.id}
-                                    onClick={() => setSelectedLot(lot)}
-                                    className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
-                                        selectedLot?.id === lot.id
-                                            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                                            : 'border-slate-200 dark:border-slate-700 hover:border-primary-300'
-                                    }`}
-                                >
-                                    <div className="grid grid-cols-3 gap-3 items-center">
-                                        <div>
-                                            <p className="font-bold text-slate-900 dark:text-white">{lot.lotNumber}</p>
+
+                            {selectedLot && (
+                                <div className="p-4 bg-primary-50 dark:bg-primary-900/10 rounded-xl border-2 border-primary-200 dark:border-primary-800 space-y-3">
+                                    <h4 className="font-bold text-slate-900 dark:text-white">Quantity to Sell</h4>
+                                    <div className="flex items-end gap-3">
+                                        <div className="flex-1">
+                                            <Input 
+                                                label="Units" 
+                                                type="number" 
+                                                value={lotQuantity} 
+                                                onChange={(e) => {
+                                                    const val = Math.max(1, Math.min(selectedLot.quantity, parseInt(e.target.value) || 1));
+                                                    setLotQuantity(val.toString());
+                                                }}
+                                                min="1"
+                                                max={selectedLot.quantity}
+                                            />
                                         </div>
-                                        <div>
-                                            <Badge variant={lot.quantity > 0 ? 'success' : 'warning'}>
-                                                {lot.quantity} units
-                                            </Badge>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm text-slate-600 dark:text-slate-400">
-                                                {lot.expiryDate ? new Date(lot.expiryDate).toLocaleDateString() : 'N/A'}
-                                            </p>
-                                        </div>
+                                        <Button 
+                                            variant="secondary" 
+                                            onClick={() => setLotQuantity((Math.max(1, parseInt(lotQuantity) - 1)).toString())}
+                                        >
+                                            <Minus size={16} />
+                                        </Button>
+                                        <Button 
+                                            variant="secondary" 
+                                            onClick={() => setLotQuantity((Math.min(selectedLot.quantity, parseInt(lotQuantity) + 1)).toString())}
+                                        >
+                                            <Plus size={16} />
+                                        </Button>
                                     </div>
-                                    {lot.location && <p className="text-xs text-slate-500 mt-2">📍 {lot.location}</p>}
-                                </button>
-                            ))}
+                                    <div className="text-xs text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 p-2 rounded">
+                                        <p>Available: <span className="font-bold text-primary-600 dark:text-primary-400">{selectedLot.quantity}</span> units</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <p className="text-slate-500 text-center py-8">No lots available for this item</p>
                     )}
 
                     <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                        <Button variant="secondary" onClick={() => { setShowLotSelector(false); setSelectedCatalogItem(null); setSelectedLot(null); }}>Cancel</Button>
+                        <Button variant="secondary" onClick={() => { setShowLotSelector(false); setSelectedCatalogItem(null); setSelectedLot(null); setLotQuantity('1'); }}>Cancel</Button>
                         <Button 
-                            onClick={() => selectedCatalogItem && selectedLot && addCatalogItemToCart(selectedCatalogItem, selectedLot)}
+                            onClick={() => selectedCatalogItem && selectedLot && addCatalogItemToCart(selectedCatalogItem, selectedLot, parseInt(lotQuantity) || 1)}
                             disabled={!selectedLot}
                             icon={<Plus size={16} />}
                         >
-                            Add to Cart
+                            Add {lotQuantity} to Cart
                         </Button>
                     </div>
                 </div>
@@ -596,34 +634,17 @@ export const PosScreen: React.FC = () => {
                         <h2 className="text-4xl font-bold mt-1">{settings.currencySymbol}{remainingToPay.toFixed(2)}</h2>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <Select 
-                            label="Method" 
-                            options={[{value: 'Cash', label: 'Cash'}, {value: 'Card', label: 'Card'}, {value: 'Online', label: 'Online Payment'}]} 
-                            value={currentSplitMethod}
-                            onChange={e => setCurrentSplitMethod(e.target.value as any)}
-                        />
-                        <div className="flex items-end gap-2">
-                            <Input label="Amount" type="number" value={currentSplitAmount} onChange={e => setCurrentSplitAmount(e.target.value)} />
-                            <Button onClick={addSplit}>Add</Button>
+                    <div className="bg-primary-50 dark:bg-primary-900/10 p-6 rounded-xl border-2 border-primary-200 dark:border-primary-800 text-center">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                            <Wallet className="text-primary-600" size={20} />
+                            <p className="font-bold text-slate-900 dark:text-white text-lg">Cash Payment</p>
                         </div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Ready to receive payment</p>
                     </div>
 
-                    <div className="space-y-2">
-                        {splits.map((s, i) => (
-                            <div key={i} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200">
-                                <div className="flex items-center gap-2">
-                                    <Badge variant="neutral">{s.method}</Badge>
-                                    <span className="font-bold">{settings.currencySymbol}{s.amount.toFixed(2)}</span>
-                                </div>
-                                <button onClick={() => setSplits(splits.filter((_, idx) => idx !== i))} className="text-rose-50"><Trash2 size={16} /></button>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                        <Button variant="secondary" onClick={() => setShowPayment(false)}>Back</Button>
-                        <Button onClick={processFinalPayment} disabled={remainingToPay > 0.05}>Finalize</Button>
+                    <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                        <Button variant="secondary" onClick={() => setShowPayment(false)}>Cancel</Button>
+                        <Button onClick={() => { setSplits([{ method: 'Cash', amount: remainingToPay }]); processFinalPayment(); }} icon={<CheckCircle size={18} />}>Finalize</Button>
                     </div>
                 </div>
             </Modal>
