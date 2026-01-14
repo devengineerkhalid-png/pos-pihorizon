@@ -107,6 +107,28 @@ export const PosScreen: React.FC = () => {
         updateActiveCart({ items: newItems });
     };
 
+    const addCatalogItemToCart = (item: CatalogItem, lot: ProductLot) => {
+        const newCartItem: PosCartItem = {
+            id: item.id,
+            cartId: Date.now().toString(),
+            name: item.name,
+            category: 'Catalog Item',
+            price: item.price,
+            costPrice: item.costPrice,
+            wholesalePrice: item.wholesalePrice,
+            stock: item.stock,
+            sku: item.sku,
+            quantity: 1,
+            lotId: lot.id,
+            lotNumber: lot.lotNumber,
+            expiryDate: lot.expiryDate
+        };
+        updateActiveCart({ items: [...currentCart.items, newCartItem] });
+        setShowLotSelector(false);
+        setSelectedLot(null);
+        setSelectedCatalogItem(null);
+    };
+
     const updateQuantity = (cartId: string, delta: number) => {
         const newItems = currentCart.items.map(item => item.cartId === cartId ? { ...item, quantity: Math.max(1, item.quantity + delta) } : item);
         updateActiveCart({ items: newItems });
